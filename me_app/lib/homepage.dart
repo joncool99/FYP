@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:me_app/students.dart';
 
+
+
+
 class HomePage extends StatelessWidget {
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Hi, Welcome '),
         bottom: PreferredSize(
-          preferredSize: Size.fromHeight(8.0),
+          preferredSize: const Size.fromHeight(8.0),
           child: Container(
             color: Colors.blue, // Change the color as needed
             height: 4.0,

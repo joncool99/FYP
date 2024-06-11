@@ -1,34 +1,39 @@
+
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'login.dart';
 import 'homepage.dart';
 import 'students.dart';
-
 import 'register.dart';
 import 'updateinfo.dart';
 
+void main() async {
+  print('-- main');
 
-void main() {
-  runApp(MyApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  print('-- WidgetsFlutterBinding.ensureInitialized');
+
+  await Firebase.initializeApp();
+  print('-- main: Firebase.initializeApp');
+
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Your App Name',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
+      debugShowCheckedModeBanner: false,
+      home: const LoginPage(),
       initialRoute: '/',
       routes: {
-        '/': (context) => LoginPage(),
+        '/login': (context) => const LoginPage(),
         '/home': (context) => HomePage(),
-        '/student': (context) => StudentPage(), 
+        '/student': (context) => StudentPage(),
         '/register': (context) => RegisterPage(),
         '/update': (context) => UpdatePage(),
-        
-        
-
       },
     );
   }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class UpdatePage extends StatefulWidget {
+class kUpdatePage extends StatefulWidget {
   @override
   _UpdatePageState createState() => _UpdatePageState();
 }
