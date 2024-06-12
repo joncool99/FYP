@@ -47,11 +47,12 @@ class _LoginPageState extends State<LoginPage> {
             children: [
               Container(
                 height: 200,
-                color: Colors.blueGrey, // Placeholder for photo widget
+                color: Colors.white, // Placeholder for photo widget
                 child: Center(
                   child: Image.asset(
-                    'asset/wallpaper.jpg',
-                    fit: BoxFit.cover,
+                    'asset/IMG_8221.jpg',
+                      fit: BoxFit.cover,
+
                   ),
                 ),
               ),
@@ -59,7 +60,7 @@ class _LoginPageState extends State<LoginPage> {
               TextFormField(
                 controller: _emailController,
                 decoration: const InputDecoration(
-                  labelText: 'Username',
+                  labelText: 'Email',
                   labelStyle: TextStyle(color: Colors.blue),
                   enabledBorder: UnderlineInputBorder(
                     borderSide: BorderSide(color: Colors.blue),
