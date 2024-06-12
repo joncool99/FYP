@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class RegisterPage extends StatefulWidget {
   @override
@@ -15,6 +17,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _majorController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  File? _image;
 
   @override
   void dispose() {
@@ -27,41 +30,59 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  Future _register() async {
+  Future<void> _pickImage() async {
     try {
-      //create user account
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+      setState(() {
+        if (pickedFile != null) {
+          _image = File(pickedFile.path);
+        } else {
+          print('No image selected.');
+        }
+      });
+    } catch (e) {
+      print("Failed to pick image: $e");
+    }
+  }
+
+  Future<void> _register() async {
+    try {
+      // Create user account
+      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      //add user details to firestore
-      addUserDetails(
-          _firstNameController.text.trim(),
-          _lastNameController.text.trim(),
-          _emailController.text.trim(),
-          _majorController.text.trim(),
-          _studentIdController.text.trim());
+      // Add user details to Firestore
+      await addUserDetails(
+        _firstNameController.text.trim(),
+        _lastNameController.text.trim(),
+        _emailController.text.trim(),
+        _majorController.text.trim(),
+        _studentIdController.text.trim(),
+      );
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Processing Data')),
+        const SnackBar(content: Text('Registration Successful')),
       );
+
       // Navigate to the home page on successful registration
       Navigator.pushNamed(context, '/home');
     } catch (e) {
       print("Failed to sign up: $e");
-      // Optionally, show a message to the user
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to register: $e')),
+      );
     }
   }
 
-  Future addUserDetails(String firstName, String lastName, String email,
-      String major, String studentId) async {
-    await FirebaseFirestore.instance.collection('Users').add({
-      'email': _emailController.text.trim(),
-      'studentId': _studentIdController.text.trim(),
-      'firstName': _firstNameController.text.trim(),
-      'lastName': _lastNameController.text.trim(),
-      'major': _majorController.text.trim(),
+  Future<void> addUserDetails(String firstName, String lastName, String email, String major, String studentId) async {
+    await FirebaseFirestore.instance.collection('Users').doc(email).set({
+      'firstName': firstName,
+      'lastName': lastName,
+      'email': email,
+      'major': major,
+      'studentId': studentId,
     });
   }
 
@@ -77,6 +98,17 @@ class _RegisterPageState extends State<RegisterPage> {
           key: _formKey,
           child: ListView(
             children: <Widget>[
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  height: 200,
+                  color: Colors.blueGrey,
+                  child: _image == null
+                      ? const Center(child: Text('No image selected.', style: TextStyle(color: Colors.white)))
+                      : Image.file(_image!),
+                ),
+              ),
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _emailController,
                 decoration: const InputDecoration(
@@ -152,13 +184,14 @@ class _RegisterPageState extends State<RegisterPage> {
               const SizedBox(height: 20),
               TextFormField(
                 controller: _passwordController,
+                obscureText: true,
                 decoration: const InputDecoration(
                   labelText: 'Password',
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter your password';
+                    return 'Please enter a password';
                   }
                   return null;
                 },
@@ -166,9 +199,8 @@ class _RegisterPageState extends State<RegisterPage> {
               const SizedBox(height: 40),
               ElevatedButton(
                 onPressed: _register,
-                child: const Text('Sign up'),
+                child: const Text('Sign Up'),
               ),
-              const SizedBox(height: 20),
             ],
           ),
         ),
