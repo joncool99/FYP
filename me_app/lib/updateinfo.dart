@@ -25,12 +25,30 @@ class _UpdatePageState extends State<UpdatePage> {
     super.dispose();
   }
 
-  void _update() {
+  void _update() async {
     if (_formKey.currentState?.validate() ?? false) {
-      // Handle the update logic here, e.g., send updated data to a server or save locally
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Updating Data')),
-      );
+      final String email = _emailController.text.trim();
+      final String studentId = _studentIdController.text.trim();
+      final String firstName = _firstNameController.text.trim();
+      final String lastName = _lastNameController.text.trim();
+      final String major = _majorController.text.trim();
+
+      try {
+        await FirebaseFirestore.instance.collection('Users').doc(email).update({
+          'studentId': studentId,
+          'firstName': firstName,
+          'lastName': lastName,
+          'major': major,
+          'email': email,
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Data updated successfully')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update data')),
+        );
+      }
     }
   }
 
