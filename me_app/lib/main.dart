@@ -1,11 +1,14 @@
 
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:me_app/adminhome.dart';
 import 'login.dart';
 import 'homepage.dart';
 import 'students.dart';
 import 'register.dart';
 import 'updateinfo.dart';
+import 'forgotpassword.dart';
+import 'adminhome.dart';
 
 void main() async {
   print('-- main');
@@ -34,6 +37,8 @@ class MyApp extends StatelessWidget {
         '/student': (context) => StudentPage(),
         '/register': (context) => RegisterPage(),
         '/update': (context) => UpdatePage(),
+        '/forgotpassword' :(context) =>  const ForgotpasswordPage(),
+        '/adminhome': (context) => const AdminhomePage(),
       },
     );
   }

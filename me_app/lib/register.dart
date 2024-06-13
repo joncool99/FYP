@@ -101,10 +101,14 @@ class _RegisterPageState extends State<RegisterPage> {
               GestureDetector(
                 onTap: _pickImage,
                 child: Container(
-                  height: 200,
-                  color: Colors.blueGrey,
+                  height: 100,
+                  width: 20,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.blue
+                  ),
                   child: _image == null
-                      ? const Center(child: Text('No image selected.', style: TextStyle(color: Colors.white)))
+                      ? const Center(child: Text('insert your face  photo here', style: TextStyle(color: Colors.white)))
                       : Image.file(_image!),
                 ),
               ),

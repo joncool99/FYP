@@ -17,8 +17,19 @@ class _LoginPageState extends State<LoginPage> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      // Navigate to the home page on successful login
-      Navigator.pushNamed(context, '/home');
+
+      String userEmail = _emailController.text.trim(); // Define userEmail using the controller
+
+      if (userEmail.endsWith('@gmail.com')) {
+        Navigator.pushNamed(context, '/adminhome');
+      } else if (userEmail.endsWith('@uowmail.edu.au')) {
+        // Corrected typo here
+        Navigator.pushNamed(context, '/home');
+      } else {
+        // If you want to navigate to '/home' for emails that don't match,
+        // this else block should be removed, and the following line should be placed outside the if-else structure.
+        Navigator.pushNamed(context, '/home');
+      }
     } catch (e) {
       print("Failed to sign in: $e");
       // Optionally, show a message to the user
@@ -116,13 +127,13 @@ class _LoginPageState extends State<LoginPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
-                  const Text('Don\'t have an account?'),
+                  const Text('Forgot your password?'),
                   GestureDetector(
                     onTap: () {
-                      Navigator.pushNamed(context, '/register');
+                      Navigator.pushNamed(context, '/forgotpassword');
                     },
                     child: const Text(
-                      'Register',
+                      'reset here',
                       style: TextStyle(
                         color: Colors.blue,
                         decoration: TextDecoration.underline,
