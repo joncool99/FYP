@@ -100,6 +100,7 @@ class _RegisterPageState extends State<RegisterPage> {
       );
 
       String uid = userCredential.user!.uid;
+      //String email = _emailController.text.trim(); // if you want to use email as the document ID
 
       // Upload image to Firebase Storage (if selected)
       if (_image != null) {
