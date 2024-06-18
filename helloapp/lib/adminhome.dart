@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:helloapp/accounts.dart';
 import 'students.dart';
 
 class AdminhomePage extends StatelessWidget {
@@ -29,7 +30,7 @@ class AdminhomePage extends StatelessWidget {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => StudentPage()),
+                      MaterialPageRoute(builder: (context) => AccountsPage()),
                     );
                   },
                   style: ElevatedButton.styleFrom(

@@ -43,11 +43,11 @@ class _StudentPageState extends State<StudentPage> {
             ),
           ),
           const SizedBox(width: 20),
-          ElevatedButton(
+          /*ElevatedButton(
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => UpdatePage()),
+                MaterialPageRoute(builder: (context) => UpdatePage(user:user)),
               );
             },
             style: ElevatedButton.styleFrom(
@@ -58,7 +58,7 @@ class _StudentPageState extends State<StudentPage> {
               'Update info',
               style: TextStyle(color: Colors.white),
             ),
-          ),
+          ),*/
           const SizedBox(width: 20),
         ],
       ),

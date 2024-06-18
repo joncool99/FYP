@@ -5,6 +5,10 @@ import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 
 class UpdatePage extends StatefulWidget {
+  final Map<String, dynamic> user;
+
+  UpdatePage({required this.user});
+
   @override
   _UpdatePageState createState() => _UpdatePageState();
 }
@@ -19,16 +23,17 @@ class _UpdatePageState extends State<UpdatePage> {
   File? _image; //store the image file
   String? _imageUrl; //store the image URL
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _studentIdController.dispose();
-    _firstNameController.dispose();
-    _lastNameController.dispose();
-    _majorController.dispose();
-    super.dispose();
+   @override
+  void initState() {
+    super.initState();
+    _emailController.text = widget.user['email'];
+    _studentIdController.text = widget.user['studentId'];
+    _firstNameController.text = widget.user['firstName'];
+    _lastNameController.text = widget.user['lastName'];
+    _majorController.text = widget.user['major'];
+    _imageUrl = widget.user['imageUrl'];
   }
-
+  
   Future<void> _pickImage() async {
     try {
       final pickedFile =

@@ -7,6 +7,7 @@ import 'students.dart';
 import 'register.dart';
 import 'updateinfo.dart';
 import 'forgotpassword.dart';
+import 'accounts.dart';
 
 void main() async {
   print('-- main');
@@ -34,10 +35,22 @@ class MyApp extends StatelessWidget {
         '/home': (context) => HomePage(),
         '/student': (context) => StudentPage(),
         '/register': (context) => RegisterPage(),
-        '/update': (context) => UpdatePage(),
+        '/account': (context) => AccountsPage(),
         '/forgotpassword': (context) => const ForgotpasswordPage(),
         '/adminhome': (context) => const AdminhomePage(),
+      },
+      onGenerateRoute: (settings) {
+        if (settings.name == '/update') {
+          final user = settings.arguments as Map<String, dynamic>;
+          return MaterialPageRoute(
+            builder: (context) {
+              return UpdatePage(user: user);
+            },
+          );
+        }
+        return null; // Let `MaterialApp` handle the rest of the routes
       },
     );
   }
 }
+ 
