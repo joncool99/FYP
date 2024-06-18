@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class RegisterPage extends StatefulWidget {
   @override
@@ -18,6 +19,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _majorController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   File? _image;
+  String? _imageUrl;
 
   @override
   void dispose() {
@@ -32,7 +34,8 @@ class _RegisterPageState extends State<RegisterPage> {
 
   Future<void> _pickImage() async {
     try {
-      final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+      final pickedFile =
+          await ImagePicker().pickImage(source: ImageSource.gallery);
       setState(() {
         if (pickedFile != null) {
           _image = File(pickedFile.path);
@@ -45,13 +48,63 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
+  // Function to upload the image to Firebase Storage
+  Future<void> _uploadImageToStorage(String uid) async {
+    if (_image == null) return;
+
+    try {
+      Reference storageRef = FirebaseStorage.instance
+          .ref()
+          .child('user_images/$uid.jpg'); // Use the user's UID
+      UploadTask uploadTask = storageRef.putFile(_image!);
+
+      // Wait for the upload to complete
+      await uploadTask.whenComplete(() async {
+        // Get the download URL after the upload is finished
+        _imageUrl = await storageRef.getDownloadURL();
+        print('Image uploaded successfully!');
+      });
+    } catch (e) {
+      print('Failed to upload image: $e');
+      // Handle the error appropriately (e.g., display a message to the user)
+    }
+  }
+
+  // Function to add user details to Firestore
+  Future<void> addUserDetails(String firstName, String lastName, String email,
+      String major, String studentId, String uid, String? imageUrl) async {
+    try {
+      await FirebaseFirestore.instance.collection('Users').doc(email).set({
+        'firstName': firstName,
+        'lastName': lastName,
+        'email': email,
+        'major': major,
+        'studentId': studentId,
+        'imageUrl': imageUrl, // Store the image URL
+      });
+      print('User details saved to Firestore!');
+    } catch (e) {
+      print('Failed to save user details: $e');
+      // Handle the error appropriately (e.g., display a message to the user)
+    }
+  }
+
+  // Function to register the user (now includes image upload)
   Future<void> _register() async {
     try {
       // Create user account
-      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      UserCredential userCredential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
+
+      String uid = userCredential.user!.uid;
+
+      // Upload image to Firebase Storage (if selected)
+      if (_image != null) {
+        await _uploadImageToStorage(uid);
+      }
 
       // Add user details to Firestore
       await addUserDetails(
@@ -60,6 +113,8 @@ class _RegisterPageState extends State<RegisterPage> {
         _emailController.text.trim(),
         _majorController.text.trim(),
         _studentIdController.text.trim(),
+        uid,
+        _imageUrl,
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -67,23 +122,14 @@ class _RegisterPageState extends State<RegisterPage> {
       );
 
       // Navigate to the home page on successful registration
-      Navigator.pushNamed(context, '/home');
+      Navigator.pushNamed(context, '/adminhome');
     } catch (e) {
       print("Failed to sign up: $e");
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to register: $e')),
       );
     }
-  }
-
-  Future<void> addUserDetails(String firstName, String lastName, String email, String major, String studentId) async {
-    await FirebaseFirestore.instance.collection('Users').doc(email).set({
-      'firstName': firstName,
-      'lastName': lastName,
-      'email': email,
-      'major': major,
-      'studentId': studentId,
-    });
   }
 
   @override
@@ -104,11 +150,11 @@ class _RegisterPageState extends State<RegisterPage> {
                   height: 100,
                   width: 20,
                   decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.blue
-                  ),
+                      shape: BoxShape.circle, color: Colors.blue),
                   child: _image == null
-                      ? const Center(child: Text('insert your face  photo here', style: TextStyle(color: Colors.white)))
+                      ? const Center(
+                          child: Text('insert your face  photo here',
+                              style: TextStyle(color: Colors.white)))
                       : Image.file(_image!),
                 ),
               ),

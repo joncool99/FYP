@@ -969,6 +969,9 @@ PODS:
   - Firebase/MLModelDownloader (10.27.0):
     - Firebase/CoreOnly
     - FirebaseMLModelDownloader (~> 10.27.0-beta)
+  - Firebase/Storage (10.27.0):
+    - Firebase/CoreOnly
+    - FirebaseStorage (~> 10.27.0)
   - firebase_auth (5.1.0):
     - Firebase/Auth (= 10.27.0)
     - firebase_core
@@ -980,6 +983,10 @@ PODS:
     - Firebase/MLModelDownloader (= 10.27.0)
     - firebase_core
     - Flutter
+  - firebase_storage (12.0.1):
+    - Firebase/Storage (= 10.27.0)
+    - firebase_core
+    - Flutter
   - FirebaseAppCheckInterop (10.27.0)
   - FirebaseAuth (10.27.0):
     - FirebaseAppCheckInterop (~> 10.17)
@@ -988,6 +995,7 @@ PODS:
     - GoogleUtilities/Environment (~> 7.8)
     - GTMSessionFetcher/Core (< 4.0, >= 2.1)
     - RecaptchaInterop (~> 100.0)
+  - FirebaseAuthInterop (10.28.0)
   - FirebaseCore (10.27.0):
     - FirebaseCoreInternal (~> 10.0)
     - GoogleUtilities/Environment (~> 7.12)
@@ -1029,6 +1037,13 @@ PODS:
     - GoogleUtilities/UserDefaults (~> 7.13)
     - SwiftProtobuf (~> 1.19)
   - FirebaseSharedSwift (10.27.0)
+  - FirebaseStorage (10.27.0):
+    - FirebaseAppCheckInterop (~> 10.0)
+    - FirebaseAuthInterop (~> 10.25)
+    - FirebaseCore (~> 10.0)
+    - FirebaseCoreExtension (~> 10.0)
+    - GoogleUtilities/Environment (~> 7.12)
+    - GTMSessionFetcher/Core (< 4.0, >= 2.1)
   - Flutter (1.0.0)
   - GoogleDataTransport (9.4.1):
     - GoogleUtilities/Environment (~> 7.7)
@@ -1156,6 +1171,7 @@ DEPENDENCIES:
   - firebase_auth (from `.symlinks/plugins/firebase_auth/ios`)
   - firebase_core (from `.symlinks/plugins/firebase_core/ios`)
   - firebase_ml_model_downloader (from `.symlinks/plugins/firebase_ml_model_downloader/ios`)
+  - firebase_storage (from `.symlinks/plugins/firebase_storage/ios`)
   - Flutter (from `Flutter`)
   - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
 
@@ -1166,6 +1182,7 @@ SPEC REPOS:
     - Firebase
     - FirebaseAppCheckInterop
     - FirebaseAuth
+    - FirebaseAuthInterop
     - FirebaseCore
     - FirebaseCoreExtension
     - FirebaseCoreInternal
@@ -1174,6 +1191,7 @@ SPEC REPOS:
     - FirebaseInstallations
     - FirebaseMLModelDownloader
     - FirebaseSharedSwift
+    - FirebaseStorage
     - GoogleDataTransport
     - GoogleUtilities
     - "gRPC-C++"
@@ -1196,6 +1214,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/firebase_core/ios"
   firebase_ml_model_downloader:
     :path: ".symlinks/plugins/firebase_ml_model_downloader/ios"
+  firebase_storage:
+    :path: ".symlinks/plugins/firebase_storage/ios"
   Flutter:
     :path: Flutter
   image_picker_ios:
@@ -1210,8 +1230,10 @@ SPEC CHECKSUMS:
   firebase_auth: fd0c6e0ea74d07460c762e05e04334364e84414b
   firebase_core: 483cfad66d24d8f3c233f31db4263830c625c909
   firebase_ml_model_downloader: 95db0ac504acc8e1722d34897b6837d189d0fb55
+  firebase_storage: b968b216552ca4948120f8d3b54585cb854d20cf
   FirebaseAppCheckInterop: 0dd062c9926a76332ca5711dbed6f1a9ac540b54
   FirebaseAuth: 77a012b7e08042bf44d0db835ca2e86e6ca7bbd3
+  FirebaseAuthInterop: cec40cbafa1f9a6e0c3334c5c750a0cae7c97f80
   FirebaseCore: a2b95ae4ce7c83ceecfbbbe3b6f1cddc7415a808
   FirebaseCoreExtension: 4ec89dd0c6de93d6becde32122d68b7c35f6bf5d
   FirebaseCoreInternal: 4b297a2d56063dbea2c1d0d04222d44a8d058862
@@ -1220,6 +1242,7 @@ SPEC CHECKSUMS:
   FirebaseInstallations: 766dabca09fd94aef922538aaf144cc4a6fb6869
   FirebaseMLModelDownloader: cfc1e47ddaa9c65ebc889e3be55477d2bf688e23
   FirebaseSharedSwift: a03fe7a59ee646fef71099a887f774fe25d745b8
+  FirebaseStorage: 255526c3d04c49874d7a5e3886964a79f77d6f33
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
   GoogleDataTransport: 6c09b596d841063d76d4288cc2d2f42cc36e1e2a
   GoogleUtilities: ea963c370a38a8069cc5f7ba4ca849a60b6d7d15
