@@ -1,7 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'updateinfo.dart';
 import 'register.dart';
 
 class AccountsPage extends StatefulWidget {

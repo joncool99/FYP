@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:helloapp/accounts.dart';
-import 'students.dart';
+import 'package:helloapp/timetable/timetable_home.dart';
+
+
 
 class AdminhomePage extends StatelessWidget {
   const AdminhomePage({super.key});
@@ -57,7 +59,10 @@ class AdminhomePage extends StatelessWidget {
                 ElevatedButton(
                   onPressed: () {
                     //go student page
-                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const TimetableHome()),
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.all(40),

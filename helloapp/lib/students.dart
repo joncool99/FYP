@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'register.dart';
-import 'updateinfo.dart';
+
 
 class StudentPage extends StatefulWidget {
   @override

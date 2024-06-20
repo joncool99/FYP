@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
-import 'students.dart';
+import 'package:helloapp/timetable/create_course.dart';
+import 'package:helloapp/timetable/view_timetable.dart';
 
-class HomePage extends StatelessWidget {
+
+class TimetableHome extends StatelessWidget {
+  const TimetableHome({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Hi, Welcome '),
+        title: const Text('Timetable Menu'),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(8.0),
           child: Container(
@@ -23,12 +26,13 @@ class HomePage extends StatelessWidget {
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                //STUDENT
+                // Create Timetable Button
                 ElevatedButton(
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => StudentPage()),
+                      MaterialPageRoute(
+                          builder: (context) => TimetableScreen()),
                     );
                   },
                   style: ElevatedButton.styleFrom(
@@ -42,20 +46,20 @@ class HomePage extends StatelessWidget {
                   ),
                   child: const Row(
                     children: <Widget>[
-                      Icon(Icons.person, size: 50, color: Colors.black),
-                      Text('STUDENT',
+                      Icon(Icons.create, size: 50, color: Colors.black),
+                      Text('Create Timetable',
                           style: TextStyle(fontSize: 20, color: Colors.black)),
                     ],
                   ),
                 ),
                 const SizedBox(height: 50),
-
-                //TIMETABLE
-
                 ElevatedButton(
                   onPressed: () {
-                    //go student page
-                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => ViewTimetableScreen()),
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.all(40),
@@ -68,41 +72,15 @@ class HomePage extends StatelessWidget {
                   ),
                   child: const Row(
                     children: <Widget>[
-                      Icon(Icons.calendar_view_month,
-                          size: 50, color: Colors.black),
-                      Text('TIMETABLE',
+                      Icon(Icons.view_agenda, size: 50, color: Colors.black),
+                      Text('view Timetable',
                           style: TextStyle(fontSize: 20, color: Colors.black)),
                     ],
                   ),
                 ),
                 const SizedBox(height: 50),
+                
 
-                //RECORDS
-                ElevatedButton(
-                  onPressed: () {
-                    //go student page
-                    Navigator.pop(context)
-                    ;
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.all(40),
-                    backgroundColor: const Color.fromARGB(255, 172, 177, 179),
-                    minimumSize: const Size(300, 100),
-                    shape: const RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.zero, // Make button rectangular
-                    ),
-                  ),
-                  child: const Row(
-                    children: <Widget>[
-                      Icon(Icons.my_library_books_rounded,
-                          size: 50, color: Colors.black),
-                      Text('RECORDS',
-                          style: TextStyle(fontSize: 20, color: Colors.black)),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 50),
               ],
             ),
           ],

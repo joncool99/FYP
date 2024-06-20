@@ -8,16 +8,13 @@ import 'register.dart';
 import 'updateinfo.dart';
 import 'forgotpassword.dart';
 import 'accounts.dart';
+import 'timetable/view_timetable.dart';
+import 'timetable/timetable_home.dart';
+import 'timetable/create_course.dart';
 
 void main() async {
-  print('-- main');
-
   WidgetsFlutterBinding.ensureInitialized();
-  print('-- WidgetsFlutterBinding.ensureInitialized');
-
   await Firebase.initializeApp();
-  print('-- main: Firebase.initializeApp');
-
   runApp(const MyApp());
 }
 
@@ -38,19 +35,21 @@ class MyApp extends StatelessWidget {
         '/account': (context) => AccountsPage(),
         '/forgotpassword': (context) => const ForgotpasswordPage(),
         '/adminhome': (context) => const AdminhomePage(),
+        '/create_course': (context) =>  TimetableScreen(),
+        '/timetable_home': (context) => const TimetableHome(),
+        '/view_timetable': (context) => ViewTimetableScreen(),
+        
+      
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/update') {
           final user = settings.arguments as Map<String, dynamic>;
           return MaterialPageRoute(
-            builder: (context) {
-              return UpdatePage(user: user);
-            },
+            builder: (context) => UpdatePage(user: user),
           );
         }
-        return null; // Let `MaterialApp` handle the rest of the routes
+        return null;
       },
     );
   }
 }
- 
