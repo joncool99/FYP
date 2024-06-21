@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:helloapp/accounts.dart';
 import 'package:helloapp/timetable/timetable_home.dart';
+import 'package:helloapp/attendance/captureImages.dart';
 
 
 
@@ -88,8 +89,13 @@ class AdminhomePage extends StatelessWidget {
                 ElevatedButton(
                   onPressed: () {
                     //go student page
-                    Navigator.pop(context);
+                    Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => CaptureImagePage()),
+              );
                   },
+              
+    
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.all(40),
                     backgroundColor: const Color.fromARGB(255, 172, 177, 179),

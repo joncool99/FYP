@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:math';
 
 class GenerateReportPage extends StatefulWidget {
   final String imageUrl;
@@ -35,15 +36,17 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
         final result = json.decode(response.body);
         print('API Response: $result'); // Log the API response
 
-        if (result['responses'][0].containsKey('faceAnnotations')) {
+        if (result['responses'] != null &&
+            result['responses'].isNotEmpty &&
+            result['responses'][0].containsKey('faceAnnotations') &&
+            result['responses'][0]['faceAnnotations'].isNotEmpty) {
           List<dynamic> faces = result['responses'][0]['faceAnnotations'];
           print(
               'Faces detected: ${faces.length}'); // Log the number of faces detected
 
           await _compareFaces(faces);
         } else {
-          print(
-              'No faces detected in the image'); // Log if no faces are detected
+          print('No faces detected in the image');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('No faces detected in the image')),
           );
@@ -57,8 +60,9 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
       }
     } catch (e) {
       print('Analysis failed: $e'); // Log the exception
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Analysis failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Analysis failed: $e')),
+      );
     } finally {
       setState(() {
         _analyzing = false;
@@ -72,15 +76,54 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
     final List<Map<String, dynamic>> registeredStudents =
         studentsSnapshot.docs.map((doc) => doc.data()).toList();
 
-    // Placeholder logic for matching faces
-    // Replace with actual face comparison logic
-    for (int i = 0;
-        i < detectedFaces.length && i < registeredStudents.length;
-        i++) {
-      _identifiedStudents.add(registeredStudents[i]);
+    for (var detectedFace in detectedFaces) {
+      List<dynamic>? detectedFaceLandmarks = detectedFace['landmarks'];
+      if (detectedFaceLandmarks != null) {
+        for (var student in registeredStudents) {
+          List<dynamic>? studentFaceLandmarks = student['faceLandmarks'];
+          if (studentFaceLandmarks != null) {
+            print('Comparing face landmarks...');
+            if (_isFaceMatch(detectedFaceLandmarks, studentFaceLandmarks)) {
+              _identifiedStudents.add(student);
+              print(
+                  'Face matched with student: ${student['firstName']} ${student['lastName']}');
+            } else {
+              print(
+                  'Face did not match with student: ${student['firstName']} ${student['lastName']}');
+            }
+          } else {
+            print(
+                'Student does not have face landmarks: ${student['firstName']} ${student['lastName']}');
+          }
+        }
+      } else {
+        print('Detected face does not have landmarks.');
+      }
     }
 
     setState(() {});
+  }
+
+  bool _isFaceMatch(
+      List<dynamic> detectedFaceLandmarks, List<dynamic> studentFaceLandmarks) {
+    if (detectedFaceLandmarks.length != studentFaceLandmarks.length) {
+      return false;
+    }
+
+    double threshold = 10.0; // Set an appropriate threshold value
+    double totalDistance = 0.0;
+
+    for (int i = 0; i < detectedFaceLandmarks.length; i++) {
+      double dx = detectedFaceLandmarks[i]['position']['x'] -
+          studentFaceLandmarks[i]['position']['x'];
+      double dy = detectedFaceLandmarks[i]['position']['y'] -
+          studentFaceLandmarks[i]['position']['y'];
+      double dz = detectedFaceLandmarks[i]['position']['z'] -
+          studentFaceLandmarks[i]['position']['z'];
+      totalDistance += sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    return totalDistance <= threshold;
   }
 
   Future<http.Response> _callGoogleCloudVisionAPI(String imageUrl) {
