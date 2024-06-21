@@ -26,11 +26,17 @@ class _LoginPageState extends State<LoginPage> {
       } else if (userEmail.endsWith('@uowmail.edu.au')) {
         // Corrected typo here
         Navigator.pushNamed(context, '/home');
-      } else {
-        // If you want to navigate to '/home' for emails that don't match,
-        // this else block should be removed, and the following line should be placed outside the if-else structure.
-        Navigator.pushNamed(context, '/home');
-      }
+      } 
+
+        else if (userEmail.contains('lecturer')) {
+                Navigator.pushNamed(context, '/lecturer');
+              } 
+        
+        else {
+                // If you want to navigate to '/home' for emails that don't match,
+                // this else block should be removed, and the following line should be placed outside the if-else structure.
+                Navigator.pushNamed(context, '/home');
+              }
     } catch (e) {
       print("Failed to sign in: $e");
       // Optionally, show a message to the user

@@ -11,6 +11,9 @@ import 'accounts.dart';
 import 'timetable/view_timetable.dart';
 import 'timetable/timetable_home.dart';
 import 'timetable/create_course.dart';
+import 'lecturer.dart';
+import 'attendance/captureImages.dart';
+import 'attendance/uploadImages.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,17 +38,23 @@ class MyApp extends StatelessWidget {
         '/account': (context) => AccountsPage(),
         '/forgotpassword': (context) => const ForgotpasswordPage(),
         '/adminhome': (context) => const AdminhomePage(),
-        '/create_course': (context) =>  TimetableScreen(),
+        '/create_course': (context) => TimetableScreen(),
         '/timetable_home': (context) => const TimetableHome(),
         '/view_timetable': (context) => ViewTimetableScreen(),
-        
-      
+        '/lecturer': (context) => LecturerPage(),
+        '/capture_image': (context) => CaptureImagePage(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/update') {
           final user = settings.arguments as Map<String, dynamic>;
           return MaterialPageRoute(
             builder: (context) => UpdatePage(user: user),
+          );
+        } else if (settings.name == '/upload_images') {
+          final args = settings.arguments as Map<String, dynamic>;
+          final imagePath = args['imagePath'] as String;
+          return MaterialPageRoute(
+            builder: (context) => UploadImagesPage(imagePath: imagePath),
           );
         }
         return null;
