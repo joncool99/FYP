@@ -91,6 +91,9 @@ class _RegisterPageState extends State<RegisterPage> {
 
   // Function to register the user (now includes image upload)
   Future<void> _register() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
     try {
       // Create user account
       UserCredential userCredential =
@@ -100,7 +103,6 @@ class _RegisterPageState extends State<RegisterPage> {
       );
 
       String uid = userCredential.user!.uid;
-      //String email = _emailController.text.trim(); // if you want to use email as the document ID
 
       // Upload image to Firebase Storage (if selected)
       if (_image != null) {
@@ -154,7 +156,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       shape: BoxShape.circle, color: Colors.blue),
                   child: _image == null
                       ? const Center(
-                          child: Text('insert your face  photo here',
+                          child: Text('Insert your face photo here',
                               style: TextStyle(color: Colors.white)))
                       : Image.file(_image!),
                 ),

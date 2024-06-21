@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
+import 'generate_report.dart';
 
 class UploadImagesPage extends StatefulWidget {
   final String imagePath;
@@ -36,12 +37,19 @@ class _UploadImagesPageState extends State<UploadImagesPage> {
     try {
       final fileName = _image.path.split('/').last;
       final firebaseStorageRef =
-          FirebaseStorage.instance.ref().child('uploads/$fileName');
+          FirebaseStorage.instance.ref().child('group_photos/$fileName');
       await firebaseStorageRef.putFile(_image);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Image uploaded successfully')));
+      final imageUrl = await firebaseStorageRef.getDownloadURL();
+      print('Image URL: $imageUrl'); // Log the image URL
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => GenerateReportPage(imageUrl: imageUrl),
+        ),
+      );
     } catch (e) {
-      print('Upload failed: $e');
+      print('Upload failed: $e'); // Log the exception
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Upload failed: $e')));
     } finally {
