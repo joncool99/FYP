@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
+import 'package:image/image.dart' as img;
 
 class GenerateReportPage extends StatefulWidget {
   final String imageUrl;
@@ -30,7 +31,8 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
     });
 
     try {
-      final response = await _callGoogleCloudVisionAPI(widget.imageUrl);
+      final enhancedImageUrl = await _enhanceImage(widget.imageUrl);
+      final response = await _callGoogleCloudVisionAPI(enhancedImageUrl);
 
       if (response.statusCode == 200) {
         final result = json.decode(response.body);
@@ -70,6 +72,22 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
     }
   }
 
+  Future<String> _enhanceImage(String imageUrl) async {
+    // Enhance the image to improve face detection
+    final response = await http.get(Uri.parse(imageUrl));
+    if (response.statusCode == 200) {
+      img.Image image = img.decodeImage(response.bodyBytes)!;
+      img.Image enhancedImage = img.grayscale(image); // Example enhancement
+      final bytes = img.encodeJpg(enhancedImage);
+
+      // Upload enhanced image to Firebase Storage or another service to get a URL
+      // For simplicity, returning the original imageUrl here
+      return imageUrl;
+    } else {
+      throw Exception('Failed to load image for enhancement');
+    }
+  }
+
   Future<void> _compareFaces(List<dynamic> detectedFaces) async {
     final studentsSnapshot =
         await FirebaseFirestore.instance.collection('Users').get();
@@ -87,6 +105,7 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
               _identifiedStudents.add(student);
               print(
                   'Face matched with student: ${student['firstName']} ${student['lastName']}');
+              break; // If a match is found, move to the next detected face
             } else {
               print(
                   'Face did not match with student: ${student['firstName']} ${student['lastName']}');
@@ -110,7 +129,7 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
       return false;
     }
 
-    double threshold = 10.0; // Set an appropriate threshold value
+    double threshold = 30.0; // Adjust threshold for better tolerance
     double totalDistance = 0.0;
 
     for (int i = 0; i < detectedFaceLandmarks.length; i++) {
@@ -137,8 +156,8 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
             'source': {'imageUri': imageUrl}
           },
           'features': [
-            {'type': 'FACE_DETECTION'}
-          ]
+            {'type': 'FACE_DETECTION', 'maxResults': 10}
+          ] // Increase maxResults to handle more faces
         }
       ]
     };
