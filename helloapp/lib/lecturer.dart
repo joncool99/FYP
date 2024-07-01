@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:helloapp/attendance/captureImages.dart';
 import 'package:helloapp/attendance/uploadImages.dart';
 import 'register.dart';
- // Ensure this file is created for the update functionality
+// Ensure this file is created for the update functionality
 
 class LecturerPage extends StatefulWidget {
   @override
@@ -31,7 +31,9 @@ class _LecturerPageState extends State<LecturerPage> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const UploadImagesPage(imagePath: '')),
+                MaterialPageRoute(
+                    builder: (context) =>
+                        const UploadImagesPage(imagePath: '')),
               );
             },
             style: ElevatedButton.styleFrom(
