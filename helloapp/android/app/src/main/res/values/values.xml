@@ -1,0 +1,9 @@
+<resources>
+    <string name="default_web_client_id" translatable="false">YOUR_DEFAULT_WEB_CLIENT_ID</string>
+    <string name="firebase_database_url" translatable="false">YOUR_DATABASE_URL</string>
+    <string name="gcm_defaultSenderId" translatable="false">517082750699</string>
+    <string name="google_api_key" translatable="false">AIzaSyCyf4kHwxgInITI_djnYxZG-2weq7Ik_LE</string>
+    <string name="google_app_id" translatable="false">1:517082750699:android:f8ab57c2c2e8d55fab68ae</string>
+    <string name="google_crash_reporting_api_key" translatable="false">YOUR_CRASH_REPORTING_API_KEY</string>
+    <string name="project_id" translatable="false">fyphelloapp</string>
+</resources>
