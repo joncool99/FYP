@@ -40,7 +40,7 @@ class MyApp extends StatelessWidget {
         '/adminhome': (context) => const AdminhomePage(),
         '/create_course': (context) => TimetableScreen(),
         '/timetable_home': (context) => const TimetableHome(),
-        '/view_timetable': (context) => ViewTimetableScreen(),
+        '/view_timetable': (context) => ViewTimetable(),
         '/lecturer': (context) => LecturerPage(),
         '/capture_image': (context) => CaptureImagePage(),
       },

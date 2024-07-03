@@ -1,93 +1,80 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'timetable_entry.dart';
 
-class ViewTimetableScreen extends StatefulWidget {
+class ViewTimetable extends StatefulWidget {
   @override
-  _ViewTimetableScreenState createState() => _ViewTimetableScreenState();
+  _ViewTimetableState createState() => _ViewTimetableState();
 }
 
-class _ViewTimetableScreenState extends State<ViewTimetableScreen> {
-  late Map<DateTime, List<dynamic>> _events;
-  List<dynamic> _selectedEvents = [];
-  DateTime _selectedDay = DateTime.now();
-  DateTime _focusedDay = DateTime.now();
+class _ViewTimetableState extends State<ViewTimetable> {
   CalendarFormat _calendarFormat = CalendarFormat.month;
+  DateTime _focusedDay = DateTime.now();
+  DateTime? _selectedDay;
+
+  Map<DateTime, List<TimetableEntry>> _events = {};
 
   @override
   void initState() {
     super.initState();
-    _events = {};
-    _loadTimetable();
+    _loadEvents();
   }
 
-  Future<void> _loadTimetable() async {
+  Future<void> _loadEvents() async {
     try {
-      final snapshot =
+      QuerySnapshot snapshot =
           await FirebaseFirestore.instance.collection('Timetable').get();
-      final events = snapshot.docs.map((doc) {
-        final data = doc.data();
-        DateTime date;
+      Map<DateTime, List<TimetableEntry>> tempEvents = {};
+      for (var doc in snapshot.docs) {
+        print('Document data: ${doc.data()}'); // Debug: Print document data
+        DateTime date = (doc['date'] as Timestamp).toDate();
+        String location = doc['location'];
+        print('Location: $location'); // Debug: Print location field
 
-        // Handling the date field
-        if (data['date'] is Timestamp) {
-          date = (data['date'] as Timestamp).toDate();
-        } else if (data['date'] is DateTime) {
-          date = data['date'];
-        } else if (data['date'] is String) {
-          // Handle string format, assuming ISO 8601 date format in Firestore
-          date = DateTime.parse(data['date']);
-        } else {
-          throw Exception('Invalid date format');
+        TimetableEntry entry = TimetableEntry(
+          courseName: doc['courseName'],
+          startTime: doc['startTime'],
+          endTime: doc['endTime'],
+          location: doc['location'],
+        );
+        DateTime dateOnly =
+            DateTime(date.year, date.month, date.day); // Remove time part
+        if (!tempEvents.containsKey(dateOnly)) {
+          tempEvents[dateOnly] = [];
         }
-
-        return {
-          'courseName': data['courseName'],
-          'courseId': data['courseId'],
-          'startTime': data['startTime'],
-          'endTime': data['endTime'],
-          'location': data['location'],
-          'date': date,
-        };
-      }).toList();
-
+        tempEvents[dateOnly]!.add(entry);
+      }
       setState(() {
-        _events = {};
-        for (var event in events) {
-          final date = event['date'] as DateTime;
-          final formattedDate = DateTime(date.year, date.month,
-              date.day); // Ensure format matches TableCalendar's date keys
-          if (_events[formattedDate] == null) _events[formattedDate] = [];
-          _events[formattedDate]!.add(event);
-        }
-
-        // Update selected events based on _selectedDay
-        _selectedEvents = _events[_selectedDay] ?? [];
+        _events = tempEvents;
       });
-    } catch (e) {
-      print('Error loading timetable: $e');
+      print('Loaded events: $_events'); // Debug: Print loaded events
+    } catch (error) {
+      print("Error loading events: $error"); // Debug: Print any errors
     }
+  }
+
+  List<TimetableEntry> _getEventsForDay(DateTime day) {
+    DateTime dayOnly = DateTime(day.year, day.month, day.day);
+    List<TimetableEntry> events = _events[dayOnly] ?? [];
+    print(
+        'Events for $dayOnly: $events'); // Debug: Print events for the selected day
+    return events;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('View Timetable'),
+        title: const Text('View Timetable'),
       ),
       body: Column(
         children: [
-          TableCalendar(
+          TableCalendar<TimetableEntry>(
+            firstDay: DateTime.utc(2020, 1, 1),
+            lastDay: DateTime.utc(2030, 12, 31),
             focusedDay: _focusedDay,
-            firstDay: DateTime(2000),
-            lastDay: DateTime(2101),
             calendarFormat: _calendarFormat,
-            onFormatChanged: (format) {
-              setState(() {
-                _calendarFormat = format;
-              });
-            },
-            eventLoader: (day) => _events[day] ?? [],
             selectedDayPredicate: (day) {
               return isSameDay(_selectedDay, day);
             },
@@ -95,24 +82,76 @@ class _ViewTimetableScreenState extends State<ViewTimetableScreen> {
               setState(() {
                 _selectedDay = selectedDay;
                 _focusedDay = focusedDay;
-                _selectedEvents = _events[selectedDay] ?? [];
               });
+              print('Selected day: $_selectedDay'); // Debug: Print selected day
             },
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: _selectedEvents.length,
-              itemBuilder: (context, index) {
-                final event = _selectedEvents[index];
-                return ListTile(
-                  title: Text(event['courseName']),
-                  subtitle: Text(
-                      '${event['startTime']} - ${event['endTime']} @ ${event['location']}'),
-                );
+            eventLoader: _getEventsForDay,
+            onFormatChanged: (format) {
+              if (_calendarFormat != format) {
+                setState(() {
+                  _calendarFormat = format;
+                });
+              }
+            },
+            onPageChanged: (focusedDay) {
+              _focusedDay = focusedDay;
+            },
+            calendarBuilders: CalendarBuilders(
+              markerBuilder: (context, date, events) {
+                if (events.isNotEmpty) {
+                  return Positioned(
+                    right: 1,
+                    bottom: 1,
+                    child: _buildEventsMarker(date, events),
+                  );
+                }
+                return null;
               },
             ),
           ),
+          const SizedBox(height: 8.0),
+          Expanded(
+            child: ListView(
+              children:
+                  _getEventsForDay(_selectedDay ?? _focusedDay).map((event) {
+                print(
+                    'Displaying event: ${event.courseName}'); // Debug: Print event details
+                return ListTile(
+                  title: Text(event.courseName),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Start: ${event.startTime}'),
+                      Text('End: ${event.endTime}'),
+                      Text(
+                          'Location: ${event.location ?? 'No location provided'}'),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEventsMarker(DateTime date, List events) {
+    return Container(
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.blue,
+      ),
+      width: 16.0,
+      height: 16.0,
+      child: Center(
+        child: Text(
+          '${events.length}',
+          style: TextStyle().copyWith(
+            color: Colors.white,
+            fontSize: 12.0,
+          ),
+        ),
       ),
     );
   }
