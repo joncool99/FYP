@@ -58,7 +58,7 @@ class TimetableHome extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => ViewTimetableScreen()),
+                          builder: (context) => ViewTimetable()),
                     );
                   },
                   style: ElevatedButton.styleFrom(
