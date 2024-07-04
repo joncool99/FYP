@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:helloapp/students/StudentHomePage.dart';
 import 'students.dart';
 
 class HomePage extends StatelessWidget {
+  final String studentEmail = ''; // Replace with actual student email logic
 
   @override
   Widget build(BuildContext context) {
@@ -36,8 +38,7 @@ class HomePage extends StatelessWidget {
                     backgroundColor: const Color.fromARGB(255, 172, 177, 179),
                     minimumSize: const Size(300, 100),
                     shape: const RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.zero, // Make button rectangular
+                      borderRadius: BorderRadius.zero, // Make button rectangular
                     ),
                   ),
                   child: const Row(
@@ -51,19 +52,19 @@ class HomePage extends StatelessWidget {
                 const SizedBox(height: 50),
 
                 //TIMETABLE
-
                 ElevatedButton(
                   onPressed: () {
-                    //go student page
-                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => StudentHomePage(email: studentEmail)),
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.all(40),
                     backgroundColor: const Color.fromARGB(255, 172, 177, 179),
                     minimumSize: const Size(300, 100),
                     shape: const RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.zero, // Make button rectangular
+                      borderRadius: BorderRadius.zero, // Make button rectangular
                     ),
                   ),
                   child: const Row(
@@ -80,17 +81,14 @@ class HomePage extends StatelessWidget {
                 //RECORDS
                 ElevatedButton(
                   onPressed: () {
-                    //go student page
-                    Navigator.pop(context)
-                    ;
+                    Navigator.pop(context);
                   },
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.all(40),
                     backgroundColor: const Color.fromARGB(255, 172, 177, 179),
                     minimumSize: const Size(300, 100),
                     shape: const RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.zero, // Make button rectangular
+                      borderRadius: BorderRadius.zero, // Make button rectangular
                     ),
                   ),
                   child: const Row(

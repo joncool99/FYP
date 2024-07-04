@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:helloapp/students/StudentHomePage.dart'; // Ensure you have the correct import path
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -24,14 +25,18 @@ class _LoginPageState extends State<LoginPage> {
       if (userEmail.endsWith('@gmail.com')) {
         Navigator.pushNamed(context, '/adminhome');
       } else if (userEmail.endsWith('@uowmail.edu.au')) {
-        // Corrected typo here
-        Navigator.pushNamed(context, '/home');
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => StudentHomePage(email: userEmail),
+          ),
+        );
       } else if (userEmail.contains('lecturer')) {
         Navigator.pushNamed(context, '/lecturer');
       } else {
-        // If you want to navigate to '/home' for emails that don't match,
-        // this else block should be removed, and the following line should be placed outside the if-else structure.
-        Navigator.pushNamed(context, '/home');
+        Navigator.pushNamed(context, '/studenthomepage', arguments: {
+          'email': userEmail,
+        });
       }
     } catch (e) {
       print("Failed to sign in: $e");

@@ -1,21 +1,51 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:helloapp/students/StudentTakeAttendance.dart';
-import 'package:helloapp/timetable/view_timetable.dart';
+import 'package:helloapp/students/Student_Enrolment.dart';
+import 'package:helloapp/students/Student_Timetable.dart';
 
-class StudentHomepage extends StatefulWidget {
+class StudentHomePage extends StatefulWidget {
+  final String email;
+
+  StudentHomePage({required this.email});
+
   @override
   _StudentHomepageState createState() => _StudentHomepageState();
 }
 
-class _StudentHomepageState extends State<StudentHomepage> {
+class _StudentHomepageState extends State<StudentHomePage> {
   int _selectedIndex = 0;
+  String studentName = '';
 
-  static final List<Widget> _widgetOptions = <Widget>[
-    HomeWidget(),
-    const Text('timetable'),
-    TakeAttendancePage(),
-    const Text('Profile Page'),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _fetchStudentName();
+  }
+
+  Future<void> _fetchStudentName() async {
+    try {
+      if (widget.email.isEmpty) {
+        print('Email is empty, cannot fetch student name.');
+        return;
+      }
+
+      DocumentSnapshot snapshot = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(widget.email)
+          .get();
+
+      if (snapshot.exists) {
+        setState(() {
+          studentName = snapshot['firstName'] ?? 'Student';
+        });
+      } else {
+        print('No document found for the email: ${widget.email}');
+      }
+    } catch (e) {
+      print('Error fetching student name: $e');
+    }
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -25,9 +55,24 @@ class _StudentHomepageState extends State<StudentHomepage> {
 
   @override
   Widget build(BuildContext context) {
+    final List<Widget> _widgetOptions = <Widget>[
+      HomeWidget(studentName: studentName),
+      ViewTimetable(),
+      StudentEnrollmentScreen(),
+      const Text('Profile Page'),
+    ];
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Student Home'),
+        title: Text(
+          _selectedIndex == 0
+              ? 'Student Home'
+              : _selectedIndex == 1
+                  ? 'Timetable'
+                  : _selectedIndex == 2
+                      ? 'Take Attendance'
+                      : 'Profile Page',
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -62,28 +107,38 @@ class _StudentHomepageState extends State<StudentHomepage> {
 }
 
 class HomeWidget extends StatelessWidget {
+  final String studentName;
+  const HomeWidget({super.key, required this.studentName});
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Padding(
-            padding: EdgeInsets.all(16.0),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Row(
               children: <Widget>[
-                CircleAvatar(
+                const CircleAvatar(
                   backgroundColor: Colors.orange,
                   child: Icon(Icons.person, color: Colors.white),
                 ),
-                SizedBox(width: 10),
+                const SizedBox(width: 10),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text('Hi, XXX',
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
-                    Text('Welcome!', style: TextStyle(fontSize: 16)),
+                    Text(
+                      'Hi, $studentName',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Text(
+                      'Welcome!',
+                      style: TextStyle(fontSize: 16),
+                    ),
                   ],
                 ),
               ],
@@ -96,8 +151,10 @@ class HomeWidget extends StatelessWidget {
           ),
           const Padding(
             padding: EdgeInsets.all(16.0),
-            child: Text('Today\'s Agenda',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            child: Text(
+              'Today\'s Agenda',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
           ),
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -118,8 +175,10 @@ class HomeWidget extends StatelessWidget {
               ],
             ),
             child: const ListTile(
-              title: Text('CSIT 321 - L01',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              title: Text(
+                'CSIT 321 - L01',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
