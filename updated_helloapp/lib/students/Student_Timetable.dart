@@ -52,6 +52,7 @@ class _ViewTimetableState extends State<ViewTimetable> {
           DateTime date = (lessonDoc['date'] as Timestamp).toDate();
           TimetableEntry entry = TimetableEntry(
             courseName: courseDoc['courseName'],
+            courseId: courseDoc['courseId'],
             startTime: lessonDoc['startTime'],
             endTime: lessonDoc['endTime'],
             location: lessonDoc['location'],
@@ -138,8 +139,7 @@ class _ViewTimetableState extends State<ViewTimetable> {
                     children: [
                       Text('Start: ${event.startTime}'),
                       Text('End: ${event.endTime}'),
-                      Text(
-                          'Location: ${event.location ?? 'No location provided'}'),
+                      Text('Location: ${event.location}'),
                     ],
                   ),
                 );
