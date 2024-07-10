@@ -5,7 +5,7 @@ class StudentProfile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        title: const Text(
             'My Profile',
             style: TextStyle(
               color: Colors.black,
@@ -27,32 +27,31 @@ class StudentProfile extends StatelessWidget {
         padding: EdgeInsets.all(16.0),
         child: Column(
           children: [
-            SizedBox(height: 20),
-            CircleAvatar(
+            const SizedBox(height: 20),
+            const CircleAvatar(
               radius: 60,
               backgroundImage: AssetImage('images/face_icon.png'),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             buildTextField('Email:', 'email@example.com', false),
             buildTextField('Student ID:', '123456789', true),
             buildTextField('First Name:', 'John', false),
             buildTextField('Last Name:', 'Doe', false),
             buildTextField('Major:', 'Computer Science', true),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {},
-              child: Text('Update'),
               style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepPurple,
                   foregroundColor: Colors.white,
-                  minimumSize: Size(double.infinity, 50)
-              ),
+                  minimumSize: Size(double.infinity, 50),
+              ),child: Text('Update')
             )
           ],
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        items: [
+        items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.schedule), label: 'Timetable'),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Attendance'),
@@ -74,7 +73,7 @@ class StudentProfile extends StatelessWidget {
         readOnly: readOnly,
         decoration: InputDecoration(
           labelText: label,
-          border: OutlineInputBorder(),
+          border: const OutlineInputBorder(),
         ),
       ),
     );

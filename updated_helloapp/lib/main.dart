@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:helloapp/students/StudentHomePage.dart';
 import 'adminhome.dart';
 import 'login.dart';
 import 'homepage.dart';
@@ -55,6 +56,12 @@ class MyApp extends StatelessWidget {
           final imagePath = args['imagePath'] as String;
           return MaterialPageRoute(
             builder: (context) => UploadImagesPage(imagePath: imagePath),
+          );
+        } else if (settings.name == '/studenthomepage') {
+          final args = settings.arguments as Map<String, dynamic>;
+          final email = args['email'] as String;
+          return MaterialPageRoute(
+            builder: (context) => StudentHomePage(email: email),
           );
         }
         return null;

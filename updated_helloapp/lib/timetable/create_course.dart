@@ -10,28 +10,59 @@ class _TimetableScreenState extends State<TimetableScreen> {
   final _formKey = GlobalKey<FormState>();
   String courseName = '';
   String courseId = '';
-  DateTime date = DateTime.now();
-  TimeOfDay startTime = TimeOfDay.now();
-  TimeOfDay endTime = TimeOfDay.now();
-  String location = '';
+  List<Lesson> lessons = [];
+  List<String> studentEmails = [];
+  final _emailController = TextEditingController();
 
   Future<void> _submitTimetable() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      await FirebaseFirestore.instance
-          .collection('Timetable')
-          .doc(courseName)
-          .set({
+
+      // Create a course document with lessons as sub-collection
+      await FirebaseFirestore.instance.collection('Courses').doc(courseId).set({
         'courseName': courseName,
         'courseId': courseId,
-        'date': Timestamp.fromDate(date),
-        'startTime': '${startTime.hour}:${startTime.minute}',
-        'endTime': '${endTime.hour}:${endTime.minute}',
-        'location': location,
+        'students': studentEmails,
       });
+
+      for (var lesson in lessons) {
+        await FirebaseFirestore.instance
+            .collection('Courses')
+            .doc(courseId)
+            .collection('Lessons')
+            .doc(lesson.lessonName)
+            .set({
+          'lessonName': lesson.lessonName,
+          'date': Timestamp.fromDate(lesson.date),
+          'startTime': '${lesson.startTime.hour}:${lesson.startTime.minute}',
+          'endTime': '${lesson.endTime.hour}:${lesson.endTime.minute}',
+          'location': lesson.location,
+        });
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Course added')),
+        SnackBar(content: Text('Course and lessons added')),
       );
+      _formKey.currentState!.reset();
+      setState(() {
+        lessons = [];
+        studentEmails = [];
+      });
+    }
+  }
+
+  void _addLesson() {
+    setState(() {
+      lessons.add(Lesson());
+    });
+  }
+
+  void _addStudentEmail() {
+    if (_emailController.text.isNotEmpty) {
+      setState(() {
+        studentEmails.add(_emailController.text);
+        _emailController.clear();
+      });
     }
   }
 
@@ -73,89 +104,203 @@ class _TimetableScreenState extends State<TimetableScreen> {
                   courseId = value!;
                 },
               ),
-              TextFormField(
-                decoration: InputDecoration(labelText: 'Location'),
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Please enter location';
-                  }
-                  return null;
-                },
-                onSaved: (value) {
-                  location = value!;
-                },
-              ),
-              SizedBox(height: 20),
-              Row(
-                children: [
-                  const Text('Date:'),
-                  const SizedBox(width: 10),
-                  ElevatedButton(
-                    onPressed: () async {
-                      DateTime? pickedDate = await showDatePicker(
-                        context: context,
-                        initialDate: date,
-                        firstDate: DateTime(2000),
-                        lastDate: DateTime(2101),
-                      );
-                      if (pickedDate != null && pickedDate != date)
-                        setState(() {
-                          date = pickedDate;
-                        });
-                    },
-                    child: Text(
-                      '${date.day}-${date.month}-${date.year}',
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  const Text('Start Time:'),
-                  const SizedBox(width: 10),
-                  ElevatedButton(
-                    onPressed: () async {
-                      TimeOfDay? pickedTime = await showTimePicker(
-                        context: context,
-                        initialTime: startTime,
-                      );
-                      if (pickedTime != null && pickedTime != startTime)
-                        setState(() {
-                          startTime = pickedTime;
-                        });
-                    },
-                    child: Text('${startTime.format(context)}'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  const Text('End Time:'),
-                  const SizedBox(width: 10),
-                  ElevatedButton(
-                    onPressed: () async {
-                      TimeOfDay? pickedTime = await showTimePicker(
-                        context: context,
-                        initialTime: endTime,
-                      );
-                      if (pickedTime != null && pickedTime != endTime)
-                        setState(() {
-                          endTime = pickedTime;
-                        });
-                    },
-                    child: Text('${endTime.format(context)}'),
-                  ),
-                ],
-              ),
               const SizedBox(height: 20),
               ElevatedButton(
+                onPressed: _addLesson,
+                child: const Text('Add Lesson'),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: lessons.length,
+                  itemBuilder: (context, index) {
+                    return LessonWidget(
+                      lesson: lessons[index],
+                      onDelete: () {
+                        setState(() {
+                          lessons.removeAt(index);
+                        });
+                      },
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Student Email',
+                  suffixIcon: IconButton(
+                    icon: Icon(Icons.add),
+                    onPressed: null, // to be set later
+                  ),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: _addStudentEmail,
+                child: const Text('Add Student'),
+              ),
+              const SizedBox(height: 20),
+              Text('Added Students:'),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: studentEmails.length,
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                      title: Text(studentEmails[index]),
+                    );
+                  },
+                ),
+              ),
+              ElevatedButton(
                 onPressed: _submitTimetable,
-                child: const Text('Submit'),
+                child: const Text('Submit Course'),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class Lesson {
+  String lessonName = '';
+  DateTime date = DateTime.now();
+  TimeOfDay startTime = TimeOfDay.now();
+  TimeOfDay endTime = TimeOfDay.now();
+  String location = '';
+
+  Lesson({
+    this.lessonName = '',
+    DateTime? date,
+    TimeOfDay? startTime,
+    TimeOfDay? endTime,
+    this.location = '',
+  })  : this.date = date ?? DateTime.now(),
+        this.startTime = startTime ?? TimeOfDay.now(),
+        this.endTime = endTime ?? TimeOfDay.now();
+}
+
+class LessonWidget extends StatefulWidget {
+  final Lesson lesson;
+  final VoidCallback onDelete;
+
+  LessonWidget({required this.lesson, required this.onDelete});
+
+  @override
+  _LessonWidgetState createState() => _LessonWidgetState();
+}
+
+class _LessonWidgetState extends State<LessonWidget> {
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextFormField(
+              decoration: const InputDecoration(labelText: 'Lesson Name'),
+              validator: (value) {
+                if (value!.isEmpty) {
+                  return 'Please enter lesson name';
+                }
+                return null;
+              },
+              onChanged: (value) {
+                widget.lesson.lessonName = value;
+              },
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const Text('Date:'),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  onPressed: () async {
+                    DateTime? pickedDate = await showDatePicker(
+                      context: context,
+                      initialDate: widget.lesson.date,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2101),
+                    );
+                    if (pickedDate != null && pickedDate != widget.lesson.date)
+                      setState(() {
+                        widget.lesson.date = pickedDate;
+                      });
+                  },
+                  child: Text(
+                    '${widget.lesson.date.day}-${widget.lesson.date.month}-${widget.lesson.date.year}',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const Text('Start Time:'),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  onPressed: () async {
+                    TimeOfDay? pickedTime = await showTimePicker(
+                      context: context,
+                      initialTime: widget.lesson.startTime,
+                    );
+                    if (pickedTime != null &&
+                        pickedTime != widget.lesson.startTime)
+                      setState(() {
+                        widget.lesson.startTime = pickedTime;
+                      });
+                  },
+                  child: Text('${widget.lesson.startTime.format(context)}'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const Text('End Time:'),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  onPressed: () async {
+                    TimeOfDay? pickedTime = await showTimePicker(
+                      context: context,
+                      initialTime: widget.lesson.endTime,
+                    );
+                    if (pickedTime != null &&
+                        pickedTime != widget.lesson.endTime)
+                      setState(() {
+                        widget.lesson.endTime = pickedTime;
+                      });
+                  },
+                  child: Text('${widget.lesson.endTime.format(context)}'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            TextFormField(
+              decoration: const InputDecoration(labelText: 'Location'),
+              validator: (value) {
+                if (value!.isEmpty) {
+                  return 'Please enter location';
+                }
+                return null;
+              },
+              onChanged: (value) {
+                widget.lesson.location = value;
+              },
+            ),
+            const SizedBox(height: 2),
+            ElevatedButton(
+              onPressed: widget.onDelete,
+              child: const Text('Delete Lesson'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'timetable_entry.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../timetable/timetable_entry.dart';
 
 class ViewTimetable extends StatefulWidget {
   @override
@@ -12,24 +13,40 @@ class _ViewTimetableState extends State<ViewTimetable> {
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
+  String? _studentEmail;
 
   Map<DateTime, List<TimetableEntry>> _events = {};
 
   @override
   void initState() {
     super.initState();
-    _loadEvents();
+    _loadStudentEmail();
+  }
+
+  Future<void> _loadStudentEmail() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      setState(() {
+        _studentEmail = user.email;
+      });
+      _loadEvents();
+    }
   }
 
   Future<void> _loadEvents() async {
+    if (_studentEmail == null) return;
+
     try {
-      QuerySnapshot coursesSnapshot =
-          await FirebaseFirestore.instance.collection('Courses').get();
+      QuerySnapshot coursesSnapshot = await FirebaseFirestore.instance
+          .collection('Courses')
+          .where('students', arrayContains: _studentEmail)
+          .get();
 
       Map<DateTime, List<TimetableEntry>> tempEvents = {};
 
       for (var courseDoc in coursesSnapshot.docs) {
-        QuerySnapshot lessonsSnapshot = await courseDoc.reference.collection('Lessons').get();
+        QuerySnapshot lessonsSnapshot =
+            await courseDoc.reference.collection('Lessons').get();
 
         for (var lessonDoc in lessonsSnapshot.docs) {
           DateTime date = (lessonDoc['date'] as Timestamp).toDate();
@@ -59,16 +76,14 @@ class _ViewTimetableState extends State<ViewTimetable> {
   List<TimetableEntry> _getEventsForDay(DateTime day) {
     DateTime dayOnly = DateTime(day.year, day.month, day.day);
     List<TimetableEntry> events = _events[dayOnly] ?? [];
-    print('Events for $dayOnly: $events'); // Debug: Print events for the selected day
+    print(
+        'Events for $dayOnly: $events'); // Debug: Print events for the selected day
     return events;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('View Timetable'),
-      ),
       body: Column(
         children: [
           TableCalendar<TimetableEntry>(
@@ -113,8 +128,10 @@ class _ViewTimetableState extends State<ViewTimetable> {
           const SizedBox(height: 8.0),
           Expanded(
             child: ListView(
-              children: _getEventsForDay(_selectedDay ?? _focusedDay).map((event) {
-                print('Displaying event: ${event.courseName}'); // Debug: Print event details
+              children:
+                  _getEventsForDay(_selectedDay ?? _focusedDay).map((event) {
+                print(
+                    'Displaying event: ${event.courseName}'); // Debug: Print event details
                 return ListTile(
                   title: Text(event.courseName),
                   subtitle: Column(
