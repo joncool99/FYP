@@ -30,7 +30,8 @@ class _TimetableScreenState extends State<TimetableScreen> {
             .collection('Courses')
             .doc(courseId)
             .collection('Lessons')
-            .add({
+            .doc(lesson.lessonName)
+            .set({
           'lessonName': lesson.lessonName,
           'date': Timestamp.fromDate(lesson.date),
           'startTime': '${lesson.startTime.hour}:${lesson.startTime.minute}',

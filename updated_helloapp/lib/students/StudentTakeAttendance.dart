@@ -1,7 +1,61 @@
 import 'package:flutter/material.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class TakeAttendancePage extends StatelessWidget {
+  final String courseName;
+  final String courseId;
+  final String lessonName;
+  final String startTime;
+  final String endTime;
+  final String location;
+
+  const TakeAttendancePage({
+    Key? key,
+    required this.courseName,
+    required this.courseId,
+    required this.lessonName,
+    required this.startTime,
+    required this.endTime,
+    required this.location,
+  }) : super(key: key);
+
+  Future<void> _takeAttendance(BuildContext context) async {
+    try {
+      // Get the current user
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No user signed in')),
+        );
+        return;
+      }
+
+      String userEmail = user.email!;
+
+      // Create or update attendance record in the database
+      await FirebaseFirestore.instance
+          .collection('Courses')
+          .doc(courseId)
+          .collection('Lessons')
+          .doc(lessonName)
+          .collection('Attendance')
+          .doc(userEmail)
+          .set({
+        'timestamp': FieldValue.serverTimestamp(),
+        'status': 'present',
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Attendance taken for $lessonName')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to take attendance: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -29,39 +83,44 @@ class TakeAttendancePage extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   Padding(
                     padding: EdgeInsets.fromLTRB(60, 40, 30, 0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Text('CSIT 321 - L01', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                        Text('Project', style: TextStyle(fontSize: 18)),
+                        Text('$courseId - $lessonName',
+                            style: const TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.bold)),
+                        Text(courseName, style: const TextStyle(fontSize: 18)),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.start,
                           children: <Widget>[
-                            Icon(Icons.access_time, size: 18),
-                            SizedBox(width: 5),
-                            Text('03:30 PM - 06:30PM', style: TextStyle(fontSize: 16)),
+                            const Icon(Icons.access_time, size: 18),
+                            const SizedBox(width: 5),
+                            Text('$startTime - $endTime',
+                                style: TextStyle(fontSize: 16)),
                           ],
                         ),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.start,
                           children: <Widget>[
-                            Icon(Icons.place, size: 18),
-                            SizedBox(width: 5),
-                            Text('Room 101', style: TextStyle(fontSize: 16)),
+                            const Icon(Icons.place, size: 18),
+                            const SizedBox(width: 5),
+                            Text(location,
+                                style: const TextStyle(fontSize: 16)),
                           ],
                         ),
-                        SizedBox(height: 20),
+                        const SizedBox(height: 20),
                         Padding(
                           padding: EdgeInsets.only(left: 0),
-                          child: Image.asset('images/face_icon.png', width: 300),
+                          child:
+                              Image.asset('images/face_icon.png', width: 300),
                         ),
                       ],
                     ),
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
@@ -69,7 +128,7 @@ class TakeAttendancePage extends StatelessWidget {
           Padding(
             padding: EdgeInsets.all(16.0),
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: () => _takeAttendance(context),
               child: Text('Take Attendance', style: TextStyle(fontSize: 18)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue[900],

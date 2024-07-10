@@ -35,6 +35,7 @@ class _ViewTimetableState extends State<ViewTimetable> {
           DateTime date = (lessonDoc['date'] as Timestamp).toDate();
           TimetableEntry entry = TimetableEntry(
             courseName: courseDoc['courseName'],
+            courseId: courseDoc['courseId'],
             startTime: lessonDoc['startTime'],
             endTime: lessonDoc['endTime'],
             location: lessonDoc['location'],
