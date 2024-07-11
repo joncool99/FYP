@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'register.dart';
+import 'admin/register.dart';
 
 
 class StudentPage extends StatefulWidget {

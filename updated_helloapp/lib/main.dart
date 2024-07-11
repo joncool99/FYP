@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:helloapp/students/StudentHomePage.dart';
-import 'adminhome.dart';
+import 'admin/adminhome.dart';
 import 'login.dart';
 import 'homepage.dart';
 import 'students.dart';
-import 'register.dart';
-import 'updateinfo.dart';
+import 'admin/register.dart';
+import 'admin/updateinfo.dart';
 import 'forgotpassword.dart';
-import 'accounts.dart';
+import 'admin/accounts.dart';
 import 'timetable/view_timetable.dart';
 import 'timetable/timetable_home.dart';
 import 'timetable/create_course.dart';
 import 'lecturer.dart';
 import 'attendance/captureImages.dart';
 import 'attendance/uploadImages.dart';
+import 'admin/delete_account.dart';
+import 'timetable/edit_course.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,6 +46,8 @@ class MyApp extends StatelessWidget {
         '/view_timetable': (context) => ViewTimetable(),
         '/lecturer': (context) => LecturerPage(),
         '/capture_image': (context) => CaptureImagePage(),
+        'delete_account': (context) => DeleteAccountPage(),
+        'edit_course': (context) => EditCourseTimetable(courseId: '',),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/update') {
