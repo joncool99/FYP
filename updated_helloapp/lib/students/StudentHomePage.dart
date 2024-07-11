@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'Student_Enrolment.dart';
 import 'Student_Timetable.dart';
 import 'StudentTakeAttendance.dart';
+import 'Student_View_Profile.dart';
 
 class StudentHomePage extends StatefulWidget {
   final String email;
@@ -101,7 +102,7 @@ class _StudentHomepageState extends State<StudentHomePage> {
       HomeWidget(studentName: studentName, lessons: todayLessons),
       ViewTimetable(),
       StudentEnrollmentScreen(),
-      const Text('Profile Page'),
+      ViewProfilePage(),
     ];
 
     return Scaffold(
@@ -117,6 +118,7 @@ class _StudentHomepageState extends State<StudentHomePage> {
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        automaticallyImplyLeading: false,
       ),
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: Container(
