@@ -39,6 +39,57 @@ class _AccountsPageState extends State<AccountsPage> {
     });
   }
 
+  Future<void> _deleteAccount(String email) async {
+    try {
+      await _firestore.collection('Users').doc(email).delete();
+      setState(() {
+        _filteredUserAccounts.removeWhere((user) => user['email'] == email);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User account deleted successfully')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete user account: $e')),
+      );
+    }
+  }
+
+  Future<void> _showDeleteConfirmationDialog(String email) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // User must tap a button to dismiss the dialog
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Account'),
+          content: const SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text('Are you sure you want to delete this account?'),
+                Text('This action cannot be undone.'),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+            ),
+            TextButton(
+              child: Text('Delete'),
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+                _deleteAccount(email); // Proceed with deletion
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -104,6 +155,9 @@ class _AccountsPageState extends State<AccountsPage> {
                           DataColumn(label: Text('Student ID')),
                           DataColumn(label: Text('Major')),
                           DataColumn(label: Text('Update')),
+                          DataColumn(
+                              label: Text(
+                                  'Delete')), // New column for delete button
                         ],
                         rows: _filteredUserAccounts.map((user) {
                           return DataRow(
@@ -125,10 +179,24 @@ class _AccountsPageState extends State<AccountsPage> {
                                   style: ElevatedButton.styleFrom(
                                     padding: const EdgeInsets.all(10),
                                     backgroundColor:
-                                        const Color.fromARGB(255, 255, 110, 20),
+                                        Color.fromARGB(255, 61, 141, 94),
                                     foregroundColor: Colors.white,
                                   ),
                                   child: const Text('Update'),
+                                ),
+                              ),
+                              DataCell(
+                                ElevatedButton(
+                                  onPressed: () {
+                                    _showDeleteConfirmationDialog(
+                                        user['email']);
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.all(10),
+                                    backgroundColor: Colors.red,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  child: const Text('Delete'),
                                 ),
                               ),
                             ],

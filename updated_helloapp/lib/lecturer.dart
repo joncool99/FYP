@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:helloapp/attendance/captureImages.dart';
 import 'package:helloapp/attendance/uploadImages.dart';
-import 'register.dart';
+import 'admin/register.dart';
 // Ensure this file is created for the update functionality
 
 class LecturerPage extends StatefulWidget {

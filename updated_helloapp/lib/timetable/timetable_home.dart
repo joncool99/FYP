@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:helloapp/timetable/course_overview.dart';
 import 'package:helloapp/timetable/create_course.dart';
+import 'package:helloapp/timetable/edit_course.dart';
 import 'package:helloapp/timetable/view_timetable.dart';
 
 
@@ -32,7 +34,7 @@ class TimetableHome extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => TimetableScreen()),
+                          builder: (context) => CourseOverview()),
                     );
                   },
                   style: ElevatedButton.styleFrom(
@@ -47,7 +49,7 @@ class TimetableHome extends StatelessWidget {
                   child: const Row(
                     children: <Widget>[
                       Icon(Icons.create, size: 50, color: Colors.black),
-                      Text('Create Timetable',
+                      Text('Course Overview',
                           style: TextStyle(fontSize: 20, color: Colors.black)),
                     ],
                   ),
@@ -73,13 +75,12 @@ class TimetableHome extends StatelessWidget {
                   child: const Row(
                     children: <Widget>[
                       Icon(Icons.view_agenda, size: 50, color: Colors.black),
-                      Text('view Timetable',
+                      Text('View Timetable',
                           style: TextStyle(fontSize: 20, color: Colors.black)),
                     ],
                   ),
                 ),
                 const SizedBox(height: 50),
-                
 
               ],
             ),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:helloapp/accounts.dart';
+import 'package:helloapp/admin/accounts.dart';
 import 'package:helloapp/timetable/timetable_home.dart';
 import 'package:helloapp/attendance/captureImages.dart';
 
