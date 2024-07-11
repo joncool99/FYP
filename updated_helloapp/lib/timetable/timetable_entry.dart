@@ -13,3 +13,5 @@ class TimetableEntry {
     required this.location,
   });
 }
+
+
