@@ -106,20 +106,7 @@ class _StudentHomepageState extends State<StudentHomePage> {
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _selectedIndex == 0
-              ? 'Student Home'
-              : _selectedIndex == 1
-                  ? 'Timetable'
-                  : _selectedIndex == 2
-                      ? 'Take Attendance'
-                      : 'Profile Page',
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-      ),
+      
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
@@ -160,9 +147,11 @@ class HomeWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
+      
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
+          const SizedBox(height: kToolbarHeight), //height of app bar
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
