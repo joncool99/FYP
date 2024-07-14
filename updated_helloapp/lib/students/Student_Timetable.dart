@@ -105,6 +105,7 @@ class _ViewTimetableState extends State<ViewTimetable> {
             height: 3.0,
           ),
         ),
+         automaticallyImplyLeading: false,
       ),
       body: Column(
         children: [
