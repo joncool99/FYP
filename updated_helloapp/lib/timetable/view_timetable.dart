@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:table_calendar/table_calendar.dart';
+import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'timetable_entry.dart';
 
@@ -9,11 +9,10 @@ class ViewTimetable extends StatefulWidget {
 }
 
 class _ViewTimetableState extends State<ViewTimetable> {
-  CalendarFormat _calendarFormat = CalendarFormat.month;
+  CalendarView _calendarView = CalendarView.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-
-  Map<DateTime, List<TimetableEntry>> _events = {};
+  List<Appointment> _appointments = [];
 
   @override
   void initState() {
@@ -26,131 +25,98 @@ class _ViewTimetableState extends State<ViewTimetable> {
       QuerySnapshot coursesSnapshot =
           await FirebaseFirestore.instance.collection('Courses').get();
 
-      Map<DateTime, List<TimetableEntry>> tempEvents = {};
+      List<Appointment> tempEvents = [];
 
       for (var courseDoc in coursesSnapshot.docs) {
-        QuerySnapshot lessonsSnapshot = await courseDoc.reference.collection('Lessons').get();
+        QuerySnapshot lessonsSnapshot =
+            await courseDoc.reference.collection('Lessons').get();
 
         for (var lessonDoc in lessonsSnapshot.docs) {
           DateTime date = (lessonDoc['date'] as Timestamp).toDate();
-          TimetableEntry entry = TimetableEntry(
-            courseName: courseDoc['courseName'],
-            courseId: courseDoc['courseId'],
-            startTime: lessonDoc['startTime'],
-            endTime: lessonDoc['endTime'],
-            location: lessonDoc['location'],
+          DateTime startTime = DateTime(
+            date.year,
+            date.month,
+            date.day,
+            int.parse(lessonDoc['startTime'].split(':')[0]),
+            int.parse(lessonDoc['startTime'].split(':')[1]),
           );
-          DateTime dateOnly = DateTime(date.year, date.month, date.day);
-          if (!tempEvents.containsKey(dateOnly)) {
-            tempEvents[dateOnly] = [];
-          }
-          tempEvents[dateOnly]!.add(entry);
+          DateTime endTime = DateTime(
+            date.year,
+            date.month,
+            date.day,
+            int.parse(lessonDoc['endTime'].split(':')[0]),
+            int.parse(lessonDoc['endTime'].split(':')[1]),
+          );
+
+          tempEvents.add(Appointment(
+            startTime: startTime,
+            endTime: endTime,
+            subject: '${courseDoc['courseName']} - ${lessonDoc['lessonName']}',
+            location: lessonDoc['location'],
+            color: Colors.blue,
+          ));
         }
       }
+
       setState(() {
-        _events = tempEvents;
+        _appointments = tempEvents;
       });
-      print('Loaded events: $_events'); // Debug: Print loaded events
     } catch (error) {
-      print("Error loading events: $error"); // Debug: Print any errors
+      print("Error loading events: $error");
     }
   }
 
-  List<TimetableEntry> _getEventsForDay(DateTime day) {
-    DateTime dayOnly = DateTime(day.year, day.month, day.day);
-    List<TimetableEntry> events = _events[dayOnly] ?? [];
-    print('Events for $dayOnly: $events'); // Debug: Print events for the selected day
-    return events;
+  void _onViewChanged(CalendarView view) {
+    setState(() {
+      _calendarView = view;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('View Timetable'),
-      ),
-      body: Column(
-        children: [
-          TableCalendar<TimetableEntry>(
-            firstDay: DateTime.utc(2020, 1, 1),
-            lastDay: DateTime.utc(2030, 12, 31),
-            focusedDay: _focusedDay,
-            calendarFormat: _calendarFormat,
-            selectedDayPredicate: (day) {
-              return isSameDay(_selectedDay, day);
-            },
-            onDaySelected: (selectedDay, focusedDay) {
-              setState(() {
-                _selectedDay = selectedDay;
-                _focusedDay = focusedDay;
-              });
-              print('Selected day: $_selectedDay'); // Debug: Print selected day
-            },
-            eventLoader: _getEventsForDay,
-            onFormatChanged: (format) {
-              if (_calendarFormat != format) {
-                setState(() {
-                  _calendarFormat = format;
-                });
-              }
-            },
-            onPageChanged: (focusedDay) {
-              _focusedDay = focusedDay;
-            },
-            calendarBuilders: CalendarBuilders(
-              markerBuilder: (context, date, events) {
-                if (events.isNotEmpty) {
-                  return Positioned(
-                    right: 1,
-                    bottom: 1,
-                    child: _buildEventsMarker(date, events),
-                  );
-                }
-                return null;
-              },
-            ),
-          ),
-          const SizedBox(height: 8.0),
-          Expanded(
-            child: ListView(
-              children: _getEventsForDay(_selectedDay ?? _focusedDay).map((event) {
-                print('Displaying event: ${event.courseName}'); // Debug: Print event details
-                return ListTile(
-                  title: Text(event.courseName),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Start: ${event.startTime}'),
-                      Text('End: ${event.endTime}'),
-                      Text('Location: ${event.location}'),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEventsMarker(DateTime date, List events) {
-    return Container(
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.blue,
-      ),
-      width: 16.0,
-      height: 16.0,
-      child: Center(
-        child: Text(
-          '${events.length}',
-          style: TextStyle().copyWith(
-            color: Colors.white,
-            fontSize: 12.0,
+        title: const Text('Timetable', style: TextStyle(color: Colors.black)),
+        centerTitle: true,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(4.0),
+          child: Container(
+            color: Colors.blue[800],
+            height: 3.0,
           ),
         ),
       ),
+      body: SfCalendar(
+        view: _calendarView,
+        dataSource: MeetingDataSource(_appointments),
+        initialSelectedDate: DateTime.now(),
+        onViewChanged: (ViewChangedDetails details) {
+          _focusedDay = details.visibleDates[0];
+        },
+        monthViewSettings: MonthViewSettings(
+          appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
+          showAgenda: true,
+        ),
+        timeSlotViewSettings: TimeSlotViewSettings(
+          startHour: 7,
+          endHour: 18,
+          timeInterval: Duration(minutes: 60),
+          timeFormat: 'h:mm a',
+        ),
+        onTap: (CalendarTapDetails details) {
+          if (details.targetElement == CalendarElement.appointment) {
+            // Handle event tap here
+          }
+        },
+      ),
     );
+  }
+}
+
+class MeetingDataSource extends CalendarDataSource {
+  MeetingDataSource(List<Appointment> source) {
+    appointments = source;
   }
 }
