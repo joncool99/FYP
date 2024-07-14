@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:helloapp/students/StudentHomePage.dart';
+import 'package:helloapp/students/Student_Home_Page.dart';
 import 'admin/adminhome.dart';
 import 'login.dart';
 import 'homepage.dart';

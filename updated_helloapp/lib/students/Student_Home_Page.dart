@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'Student_Enrolment.dart';
+import 'package:helloapp/students/Student_View_Attendance.dart';
+import 'package:helloapp/students/Student_View_Profile.dart';
 import 'Student_Timetable.dart';
 import 'StudentTakeAttendance.dart';
-import 'Student_View_Profile.dart';
 
 class StudentHomePage extends StatefulWidget {
   final String email;
@@ -101,12 +101,11 @@ class _StudentHomepageState extends State<StudentHomePage> {
     final List<Widget> _widgetOptions = <Widget>[
       HomeWidget(studentName: studentName, lessons: todayLessons),
       ViewTimetable(),
-      StudentEnrollmentScreen(),
+      const RecordPage(),
       ViewProfilePage(),
     ];
 
     return Scaffold(
-      
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
@@ -147,7 +146,6 @@ class HomeWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -242,7 +240,7 @@ class HomeWidget extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => TakeAttendancePage(
-                        courseName : lesson['courseName'],
+                        courseName: lesson['courseName'],
                         courseId: lesson['courseId'],
                         lessonName: lesson['lessonName'],
                         startTime: lesson['startTime'],
@@ -254,7 +252,7 @@ class HomeWidget extends StatelessWidget {
                 },
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );
