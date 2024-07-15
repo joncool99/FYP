@@ -1,0 +1,48 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "helloapp",
+            "cwd": "helloapp",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "helloapp (profile mode)",
+            "cwd": "helloapp",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "helloapp (release mode)",
+            "cwd": "helloapp",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "updated_helloapp",
+            "cwd": "updated_helloapp",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "updated_helloapp (profile mode)",
+            "cwd": "updated_helloapp",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "updated_helloapp (release mode)",
+            "cwd": "updated_helloapp",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        }
+    ]
+}

@@ -1,69 +1,70 @@
 import 'package:flutter/material.dart';
-import 'package:helloapp/attendance/captureImages.dart';
-import 'package:helloapp/attendance/uploadImages.dart';
-import 'register.dart';
-// Ensure this file is created for the update functionality
+import 'lecturer/Lecturer_HomePage.dart';
+import 'lecturer/Lecturer_TimetablePage.dart';
+import 'lecturer/Lecturer_RecordsPage.dart';
+import 'lecturer/Lecturer_ProfilePage.dart';
+import 'lecturer/Lecturer_AttendancePage.dart';
 
-class LecturerPage extends StatefulWidget {
+class LecturerPage extends StatelessWidget {
   @override
-  _LecturerPageState createState() => _LecturerPageState();
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
+      ),
+      home: MainPage(),
+    );
+  }
 }
 
-class _LecturerPageState extends State<LecturerPage> {
+class MainPage extends StatefulWidget {
+  @override
+  _MainPageState createState() => _MainPageState();
+}
+
+class _MainPageState extends State<MainPage> {
+  int _selectedIndex = 0;
+
+  final List<Widget> _pages = [
+    Lecturer_HomePage(),
+    Lecturer_TimetablePage(),
+    Lecturer_RecordsPage(),
+    Lecturer_ProfilePage(),
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('LECTURERS'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(8.0),
-          child: Container(
-            color: Colors.blue, // Change the color as needed
-            height: 4.0,
+      body: _pages[_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home, color: Colors.black),
+            label: 'Homepage',
           ),
-        ),
-      ),
-      body: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(height: 90),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) =>
-                        const UploadImagesPage(imagePath: '')),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.all(20),
-              backgroundColor: const Color.fromARGB(255, 1, 124, 255),
-            ),
-            child: const Text(
-              'Attendance',
-              style: TextStyle(color: Colors.white),
-            ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_month, color: Colors.black),
+            label: 'Timetable',
           ),
-          const SizedBox(width: 20),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => CaptureImagePage()),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.all(20),
-              backgroundColor: const Color.fromARGB(255, 1, 124, 255),
-            ),
-            child: const Text(
-              'Update info',
-              style: TextStyle(color: Colors.white),
-            ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.data_thresholding_outlined, color: Colors.black),
+            label: 'Records',
           ),
-          const SizedBox(width: 20),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person, color: Colors.black),
+            label: 'Profile',
+          ),
         ],
+        currentIndex: _selectedIndex,
+        selectedItemColor: Colors.blue,
+        onTap: _onItemTapped,
       ),
     );
   }
