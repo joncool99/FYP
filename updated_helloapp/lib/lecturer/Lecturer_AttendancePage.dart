@@ -27,7 +27,7 @@ class Lecturer_AttendancePage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             Text(
-              "${classDetail.name} - ${classDetail.group}",
+              "${classDetail.name}",
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             Text(classDetail.type),

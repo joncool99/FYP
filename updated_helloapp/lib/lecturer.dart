@@ -27,7 +27,7 @@ class _MainPageState extends State<MainPage> {
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [
-    Lecturer_HomePage(),
+    const Lecturer_HomePage(),
     Lecturer_TimetablePage(),
     Lecturer_RecordsPage(),
     Lecturer_ProfilePage(),

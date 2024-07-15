@@ -82,7 +82,7 @@ class _Lecturer_HomePageState extends State<Lecturer_HomePage> {
                                   crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: <Widget>[
                                     Text(
-                                        "${classDetail.name} - ${classDetail.group}",
+                                        "${classDetail.name}",
                                         style: const TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 18)),
@@ -119,7 +119,6 @@ class _Lecturer_HomePageState extends State<Lecturer_HomePage> {
     classDetails = [
       ClassDetail(
           name: 'CSIT321',
-          group: 'L01',
           type: 'Project',
           time: '03:30 PM - 06:30 PM',
           location: 'Room 101')
@@ -129,14 +128,13 @@ class _Lecturer_HomePageState extends State<Lecturer_HomePage> {
 
 class ClassDetail {
   final String name;
-  final String group;
+
   final String type;
   final String time;
   final String location;
 
   ClassDetail(
       {required this.name,
-      required this.group,
       required this.type,
       required this.time,
       required this.location});

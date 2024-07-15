@@ -1,6 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
-class Lecturer_ProfilePage extends StatelessWidget {
+class Lecturer_ProfilePage extends StatefulWidget {
+  @override
+  _Lecturer_ProfilePageState createState() => _Lecturer_ProfilePageState();
+}
+
+class _Lecturer_ProfilePageState extends State<Lecturer_ProfilePage> {
+  File? _image;
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final pickedFile = await ImagePicker().pickImage(source: source);
+      setState(() {
+        if (pickedFile != null) {
+          _image = File(pickedFile.path);
+        } else {
+          print('No image selected.');
+        }
+      });
+    } catch (e) {
+      print("Failed to pick image: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -12,13 +36,43 @@ class Lecturer_ProfilePage extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircleAvatar(
-              radius: 60,
-              backgroundImage: AssetImage('assets/profile_image.png'),
+            GestureDetector(
+              onTap: () async {
+                showModalBottomSheet(
+                  context: context,
+                  builder: (context) => Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ListTile(
+                        leading: Icon(Icons.photo_camera),
+                        title: Text('Take a photo'),
+                        onTap: () {
+                          Navigator.pop(context);
+                          _pickImage(ImageSource.camera);
+                        },
+                      ),
+                      ListTile(
+                        leading: Icon(Icons.photo_library),
+                        title: Text('Pick from gallery'),
+                        onTap: () {
+                          Navigator.pop(context);
+                          _pickImage(ImageSource.gallery);
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+              child: CircleAvatar(
+                radius: 60,
+                backgroundImage: _image == null
+                    ? AssetImage('assets/profile_image.png')
+                    : FileImage(_image!) as ImageProvider,
+              ),
             ),
             SizedBox(height: 20),
             _buildProfileField('Email:', 'johnD@gmail.com'),
-            _buildProfileField('Lecturer ID:', '12345', isEditable: false),
+            _buildProfileField('Lecturer ID:', '001', isEditable: false),
             _buildProfileField('First Name:', 'John'),
             _buildProfileField('Last Name:', 'Doe'),
             SizedBox(height: 20),
