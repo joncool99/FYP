@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:helloapp/students/Student_View_Attendance.dart';
+//import 'package:helloapp/students/Student_View_Attendance.dart';
 import 'package:helloapp/students/Student_View_Profile.dart';
 import 'Student_Timetable.dart';
 import 'StudentTakeAttendance.dart';
@@ -101,7 +101,7 @@ class _StudentHomepageState extends State<StudentHomePage> {
     final List<Widget> _widgetOptions = <Widget>[
       HomeWidget(studentName: studentName, lessons: todayLessons),
       ViewTimetable(),
-      const RecordPage(),
+      //const RecordPage(),
       ViewProfilePage(),
     ];
 
