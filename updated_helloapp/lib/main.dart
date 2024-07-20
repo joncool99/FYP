@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:helloapp/lecturer/Lecturer_Home_Page.dart';
 import 'package:helloapp/students/Student_Home_Page.dart';
 import 'admin/adminhome.dart';
 import 'login.dart';
@@ -12,7 +13,6 @@ import 'admin/accounts.dart';
 import 'timetable/view_timetable.dart';
 import 'timetable/timetable_home.dart';
 import 'timetable/create_course.dart';
-import 'lecturer.dart';
 import 'attendance/captureImages.dart';
 import 'attendance/uploadImages.dart';
 import 'admin/delete_account.dart';
@@ -36,7 +36,6 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => const LoginPage(),
         '/home': (context) => HomePage(),
-        '/student': (context) => StudentPage(),
         '/register': (context) => RegisterPage(),
         '/account': (context) => AccountsPage(),
         '/forgotpassword': (context) => const ForgotpasswordPage(),
@@ -44,12 +43,9 @@ class MyApp extends StatelessWidget {
         '/create_course': (context) => TimetableScreen(),
         '/timetable_home': (context) => const TimetableHome(),
         '/view_timetable': (context) => ViewTimetable(),
-        '/lecturer': (context) => LecturerPage(),
         '/capture_image': (context) => CaptureImagePage(),
         'delete_account': (context) => DeleteAccountPage(),
-        'edit_course': (context) => EditCourseTimetable(
-              courseId: '',
-            ),
+        'edit_course': (context) => EditCourseTimetable(courseId: ''),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/update') {
@@ -68,6 +64,12 @@ class MyApp extends StatelessWidget {
           final email = args['email'] as String;
           return MaterialPageRoute(
             builder: (context) => StudentHomePage(email: email),
+          );
+        } else if (settings.name == '/lecturerhomepage') {
+          final args = settings.arguments as Map<String, dynamic>;
+          final email = args['email'] as String;
+          return MaterialPageRoute(
+            builder: (context) => LecturerHomePage(email: email),
           );
         }
         return null;

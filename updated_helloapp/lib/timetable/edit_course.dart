@@ -13,6 +13,7 @@ class EditCourseTimetable extends StatefulWidget {
 class _EditCourseTimetableState extends State<EditCourseTimetable> {
   final _formKey = GlobalKey<FormState>();
   String courseName = '';
+  String lecturerEmail = '';
   List<Lesson> lessons = [];
   List<String> studentEmails = [];
   final _emailController = TextEditingController();
@@ -31,8 +32,8 @@ class _EditCourseTimetableState extends State<EditCourseTimetable> {
 
     setState(() {
       courseName = courseDoc['courseName'];
+      lecturerEmail = (courseDoc['lecturers'] as List<dynamic>).first;
       studentEmails = List<String>.from(courseDoc['students']);
-
       _fetchLessons();
     });
   }
@@ -60,6 +61,7 @@ class _EditCourseTimetableState extends State<EditCourseTimetable> {
           .doc(widget.courseId)
           .update({
         'courseName': courseName,
+        'lecturers': [lecturerEmail],
         'students': studentEmails,
       });
 
@@ -153,6 +155,19 @@ class _EditCourseTimetableState extends State<EditCourseTimetable> {
                 },
                 onSaved: (value) {
                   courseName = value!;
+                },
+              ),
+              TextFormField(
+                initialValue: lecturerEmail,
+                decoration: const InputDecoration(labelText: 'Lecturer Email'),
+                validator: (value) {
+                  if (value!.isEmpty) {
+                    return 'Please enter lecturer email';
+                  }
+                  return null;
+                },
+                onSaved: (value) {
+                  lecturerEmail = value!;
                 },
               ),
               const SizedBox(height: 20),
@@ -299,24 +314,31 @@ class _LessonWidgetState extends State<LessonWidget> {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
+      margin: const EdgeInsets.symmetric(vertical: 10.0),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextFormField(
-              initialValue: widget.lesson.lessonName,
-              decoration: const InputDecoration(labelText: 'Lesson Name'),
-              validator: (value) {
-                if (value!.isEmpty) {
-                  return 'Please enter lesson name';
-                }
-                return null;
-              },
-              onChanged: (value) {
-                widget.lesson.lessonName = value;
-              },
+            Container(
+              width: double.infinity,
+              child: TextFormField(
+                initialValue: widget.lesson.lessonName,
+                decoration: const InputDecoration(
+                  labelText: 'Lesson Name',
+                  contentPadding:
+                      EdgeInsets.symmetric(vertical: 15, horizontal: 10),
+                ),
+                validator: (value) {
+                  if (value!.isEmpty) {
+                    return 'Please enter lesson name';
+                  }
+                  return null;
+                },
+                onChanged: (value) {
+                  widget.lesson.lessonName = value;
+                },
+              ),
             ),
             const SizedBox(height: 10),
             Row(

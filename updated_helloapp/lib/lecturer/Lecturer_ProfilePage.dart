@@ -1,27 +1,50 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class Lecturer_ProfilePage extends StatefulWidget {
+class LecturerProfilePage extends StatefulWidget {
   @override
-  _Lecturer_ProfilePageState createState() => _Lecturer_ProfilePageState();
+  _LecturerProfilePageState createState() => _LecturerProfilePageState();
 }
 
-class _Lecturer_ProfilePageState extends State<Lecturer_ProfilePage> {
-  File? _image;
+class _LecturerProfilePageState extends State<LecturerProfilePage> {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  User? _user;
+  Map<String, dynamic>? _userData;
+  List<Map<String, dynamic>> enrolledCourses = [];
 
-  Future<void> _pickImage(ImageSource source) async {
-    try {
-      final pickedFile = await ImagePicker().pickImage(source: source);
+  @override
+  void initState() {
+    super.initState();
+    _user = _auth.currentUser;
+    _fetchUserData();
+  }
+
+  Future<void> _fetchUserData() async {
+    if (_user != null) {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(_user!.email)
+          .get();
       setState(() {
-        if (pickedFile != null) {
-          _image = File(pickedFile.path);
-        } else {
-          print('No image selected.');
-        }
+        _userData = userDoc.data() as Map<String, dynamic>?;
       });
-    } catch (e) {
-      print("Failed to pick image: $e");
+      _fetchEnrolledCourses();
+    }
+  }
+
+  Future<void> _fetchEnrolledCourses() async {
+    if (_user != null) {
+      QuerySnapshot coursesSnapshot = await FirebaseFirestore.instance
+          .collection('Courses')
+          .where('lecturers', arrayContains: _user!.email)
+          .get();
+
+      setState(() {
+        enrolledCourses = coursesSnapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+      });
     }
   }
 
@@ -29,90 +52,113 @@ class _Lecturer_ProfilePageState extends State<Lecturer_ProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('My Profile'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            GestureDetector(
-              onTap: () async {
-                showModalBottomSheet(
-                  context: context,
-                  builder: (context) => Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ListTile(
-                        leading: Icon(Icons.photo_camera),
-                        title: Text('Take a photo'),
-                        onTap: () {
-                          Navigator.pop(context);
-                          _pickImage(ImageSource.camera);
-                        },
-                      ),
-                      ListTile(
-                        leading: Icon(Icons.photo_library),
-                        title: Text('Pick from gallery'),
-                        onTap: () {
-                          Navigator.pop(context);
-                          _pickImage(ImageSource.gallery);
-                        },
-                      ),
-                    ],
-                  ),
-                );
-              },
-              child: CircleAvatar(
-                radius: 60,
-                backgroundImage: _image == null
-                    ? AssetImage('assets/profile_image.png')
-                    : FileImage(_image!) as ImageProvider,
-              ),
-            ),
-            SizedBox(height: 20),
-            _buildProfileField('Email:', 'lecturer001@hotmail.com'),
-            _buildProfileField('Lecturer ID:', '001', isEditable: false),
-            _buildProfileField('First Name:', 'John'),
-            _buildProfileField('Last Name:', 'Doe'),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                // Add update functionality here
-              },
-              child: Text('Update'),
-            ),
-          ],
+        title: const Text(
+          'View Profile',
+          style: TextStyle(color: Colors.black),
         ),
-      ),
-    );
-  }
-
-  Widget _buildProfileField(String label, String value, {bool isEditable = true}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              label,
-              style: TextStyle(fontSize: 16),
-            ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(8.0),
+          child: Container(
+            height: 2,
+            color: Colors.blue[900],
           ),
-          Expanded(
-            flex: 3,
-            child: TextField(
-              enabled: isEditable,
-              decoration: InputDecoration(
-                hintText: value,
-                filled: !isEditable,
-                fillColor: isEditable ? Colors.white : Colors.grey.shade300,
+        ),
+        automaticallyImplyLeading: false,
+      ),
+      body: _userData == null
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    Center(
+                      child: ClipOval(
+                        child: Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            image: DecorationImage(
+                              image: _userData!['imageUrl'] != null
+                                  ? NetworkImage(_userData!['imageUrl'])
+                                  : const AssetImage(
+                                          'assets/images/default_user.png')
+                                      as ImageProvider,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      '${_userData!['firstName']} ${_userData!['lastName']}',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Email: ${_userData!['email']}',
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Lecturer ID: ${_userData!['studentId']}',
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Major: ${_userData!['major']}',
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                    const SizedBox(height: 20),
+                    Divider(color: Colors.blue[900]),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Courses Taught',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    enrolledCourses.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'No courses taught',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          )
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: enrolledCourses.length,
+                            itemBuilder: (context, index) {
+                              var course = enrolledCourses[index];
+                              return Card(
+                                margin:
+                                    const EdgeInsets.symmetric(vertical: 8.0),
+                                child: ListTile(
+                                  title: Text(
+                                    course['courseName'],
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  subtitle:
+                                      Text('Course ID: ${course['courseId']}'),
+                                ),
+                              );
+                            },
+                          ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
     );
   }
 }

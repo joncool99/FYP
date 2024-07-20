@@ -10,6 +10,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
   final _formKey = GlobalKey<FormState>();
   String courseName = '';
   String courseId = '';
+  String lecturerEmail = '';
   List<Lesson> lessons = [];
   List<String> studentEmails = [];
   final _emailController = TextEditingController();
@@ -22,6 +23,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
       await FirebaseFirestore.instance.collection('Courses').doc(courseId).set({
         'courseName': courseName,
         'courseId': courseId,
+        'lecturers': [lecturerEmail],
         'students': studentEmails,
       });
 
@@ -102,6 +104,18 @@ class _TimetableScreenState extends State<TimetableScreen> {
                 },
                 onSaved: (value) {
                   courseId = value!;
+                },
+              ),
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'Lecturer Email'),
+                validator: (value) {
+                  if (value!.isEmpty) {
+                    return 'Please enter lecturer email';
+                  }
+                  return null;
+                },
+                onSaved: (value) {
+                  lecturerEmail = value!;
                 },
               ),
               const SizedBox(height: 20),
@@ -195,23 +209,30 @@ class _LessonWidgetState extends State<LessonWidget> {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
+      margin: const EdgeInsets.symmetric(vertical: 10.0),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextFormField(
-              decoration: const InputDecoration(labelText: 'Lesson Name'),
-              validator: (value) {
-                if (value!.isEmpty) {
-                  return 'Please enter lesson name';
-                }
-                return null;
-              },
-              onChanged: (value) {
-                widget.lesson.lessonName = value;
-              },
+            Container(
+              width: double.infinity,
+              child: TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Lesson Name',
+                  contentPadding:
+                      EdgeInsets.symmetric(vertical: 15, horizontal: 10),
+                ),
+                validator: (value) {
+                  if (value!.isEmpty) {
+                    return 'Please enter lesson name';
+                  }
+                  return null;
+                },
+                onChanged: (value) {
+                  widget.lesson.lessonName = value;
+                },
+              ),
             ),
             const SizedBox(height: 10),
             Row(
