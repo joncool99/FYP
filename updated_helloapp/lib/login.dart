@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:helloapp/students/Student_Home_Page.dart'; // Ensure you have the correct import path
-
+import 'lecturer/Lecturer_Home_Page.dart'; // Ensure you have the correct import path
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
   @override
@@ -32,7 +32,9 @@ class _LoginPageState extends State<LoginPage> {
           ),
         );
       } else if (userEmail.contains('lecturer')) {
-        Navigator.pushNamed(context, '/lecturer');
+        Navigator.pushNamed(context, '/lecturerhomepage', arguments: {
+          'email': userEmail,
+        });
       } else {
         Navigator.pushNamed(context, '/studenthomepage', arguments: {
           'email': userEmail,
