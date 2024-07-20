@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:helloapp/students/StudentHomePage.dart';
+import 'package:helloapp/students/Student_Home_Page.dart';
 import 'students.dart';
 
 class HomePage extends StatelessWidget {
