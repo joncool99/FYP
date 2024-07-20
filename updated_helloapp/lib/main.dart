@@ -47,7 +47,9 @@ class MyApp extends StatelessWidget {
         '/lecturer': (context) => LecturerPage(),
         '/capture_image': (context) => CaptureImagePage(),
         'delete_account': (context) => DeleteAccountPage(),
-        'edit_course': (context) => EditCourseTimetable(courseId: '',),
+        'edit_course': (context) => EditCourseTimetable(
+              courseId: '',
+            ),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/update') {
