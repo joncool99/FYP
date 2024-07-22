@@ -33,7 +33,7 @@ class _LecturerHomePageState extends State<LecturerHomePage> {
       }
 
       DocumentSnapshot snapshot = await FirebaseFirestore.instance
-          .collection('Lecturers')
+          .collection('Users')
           .doc(widget.email)
           .get();
 

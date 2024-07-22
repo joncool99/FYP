@@ -232,12 +232,12 @@ class _RegisterPageState extends State<RegisterPage> {
               TextFormField(
                 controller: _studentIdController,
                 decoration: const InputDecoration(
-                  labelText: 'Student ID',
+                  labelText: 'Student ID/Lecturer ID',
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter your student ID';
+                    return 'Please enter ID';
                   }
                   return null;
                 },

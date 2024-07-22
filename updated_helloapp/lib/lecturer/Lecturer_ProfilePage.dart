@@ -23,7 +23,7 @@ class _LecturerProfilePageState extends State<LecturerProfilePage> {
   Future<void> _fetchUserData() async {
     if (_user != null) {
       DocumentSnapshot userDoc = await FirebaseFirestore.instance
-          .collection('Lecturers')
+          .collection('Users')
           .doc(_user!.email)
           .get();
       setState(() {
