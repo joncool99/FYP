@@ -102,7 +102,7 @@ class _LecturerHomePageState extends State<LecturerHomePage> {
     final List<Widget> _widgetOptions = <Widget>[
       HomeWidget(lecturerName: lecturerName, lessons: todayLessons),
       LecturerTimetable(),
-      const Lecturer_RecordsPage(),
+      LecturerRecordsPage(),
       LecturerProfilePage(), 
       // Make sure you have a LecturerProfilePage class
     ];
