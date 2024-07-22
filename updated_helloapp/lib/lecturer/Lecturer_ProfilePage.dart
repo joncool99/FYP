@@ -11,7 +11,7 @@ class _LecturerProfilePageState extends State<LecturerProfilePage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   User? _user;
   Map<String, dynamic>? _userData;
-  List<Map<String, dynamic>> enrolledCourses = [];
+  List<Map<String, dynamic>> teachingCourses = [];
 
   @override
   void initState() {
@@ -23,17 +23,17 @@ class _LecturerProfilePageState extends State<LecturerProfilePage> {
   Future<void> _fetchUserData() async {
     if (_user != null) {
       DocumentSnapshot userDoc = await FirebaseFirestore.instance
-          .collection('Users')
+          .collection('Lecturers')
           .doc(_user!.email)
           .get();
       setState(() {
         _userData = userDoc.data() as Map<String, dynamic>?;
       });
-      _fetchEnrolledCourses();
+      _fetchTeachingCourses();
     }
   }
 
-  Future<void> _fetchEnrolledCourses() async {
+  Future<void> _fetchTeachingCourses() async {
     if (_user != null) {
       QuerySnapshot coursesSnapshot = await FirebaseFirestore.instance
           .collection('Courses')
@@ -41,7 +41,7 @@ class _LecturerProfilePageState extends State<LecturerProfilePage> {
           .get();
 
       setState(() {
-        enrolledCourses = coursesSnapshot.docs
+        teachingCourses = coursesSnapshot.docs
             .map((doc) => doc.data() as Map<String, dynamic>)
             .toList();
       });
@@ -107,12 +107,7 @@ class _LecturerProfilePageState extends State<LecturerProfilePage> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Lecturer ID: ${_userData!['studentId']}',
-                      style: const TextStyle(fontSize: 18),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Major: ${_userData!['major']}',
+                      'Lecturer ID: ${_userData!['lecturerId']}',
                       style: const TextStyle(fontSize: 18),
                     ),
                     const SizedBox(height: 20),
@@ -126,7 +121,7 @@ class _LecturerProfilePageState extends State<LecturerProfilePage> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    enrolledCourses.isEmpty
+                    teachingCourses.isEmpty
                         ? const Center(
                             child: Text(
                               'No courses taught',
@@ -136,9 +131,9 @@ class _LecturerProfilePageState extends State<LecturerProfilePage> {
                         : ListView.builder(
                             shrinkWrap: true,
                             physics: NeverScrollableScrollPhysics(),
-                            itemCount: enrolledCourses.length,
+                            itemCount: teachingCourses.length,
                             itemBuilder: (context, index) {
-                              var course = enrolledCourses[index];
+                              var course = teachingCourses[index];
                               return Card(
                                 margin:
                                     const EdgeInsets.symmetric(vertical: 8.0),

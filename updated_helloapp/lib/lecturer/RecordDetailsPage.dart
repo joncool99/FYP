@@ -1,30 +1,78 @@
 import 'package:flutter/material.dart';
-import 'RecordGraphPage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class Lecturer_RecordsPage extends StatefulWidget {
-  const Lecturer_RecordsPage({super.key});
+class RecordsDetail extends StatefulWidget {
+  final String courseId;
+  final String courseName;
+  final String lessonId;
+
+  const RecordsDetail({
+    super.key,
+    required this.courseId,
+    required this.courseName,
+    required this.lessonId,
+  });
 
   @override
-  State<Lecturer_RecordsPage> createState() => _Lecturer_RecordsPageState();
+  State<RecordsDetail> createState() => _RecordsDetailState();
 }
 
-class _Lecturer_RecordsPageState extends State<Lecturer_RecordsPage> {
+class _RecordsDetailState extends State<RecordsDetail> {
   List<AttendanceDetail> details = [];
+  double attendancePercentage = 0.0;
 
   @override
   void initState() {
     super.initState();
-
-    details = [
-      AttendanceDetail(index: 1, name: 'Afham', attendance: true),
-      AttendanceDetail(index: 2, name: 'Athira Ramesh', attendance: true),
-      AttendanceDetail(index: 3, name: 'Athira Sunil', attendance: true),
-      AttendanceDetail(index: 4, name: 'Aswin', attendance: false),
-      AttendanceDetail(index: 5, name: 'Alibaba', attendance: true),
-      AttendanceDetail(index: 6, name: 'Zach Strawberry', attendance: true),
-    ];
+    fetchAttendanceData();
   }
-  
+
+  Future<void> fetchAttendanceData() async {
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('Courses')
+          .doc(widget.courseId)
+          .collection('Lessons')
+          .doc(widget.lessonId)
+          .collection('Attendance')
+          .get();
+
+      List<AttendanceDetail> fetchedDetails = [];
+      int presentCount = 0;
+
+      for (var doc in querySnapshot.docs) {
+        bool isPresent = doc['status'] == 'present';
+        if (isPresent) presentCount++;
+
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+            .collection('Users')
+            .doc(doc.id)
+            .get();
+        String userName = userDoc.exists ? userDoc['name'] : doc.id;
+
+        fetchedDetails.add(
+          AttendanceDetail(
+            index: fetchedDetails.length + 1,
+            name: doc.id,
+            attendance: isPresent,
+          ),
+        );
+      }
+
+      double percentage = 0.0;
+      if (fetchedDetails.isNotEmpty) {
+        percentage = (presentCount / fetchedDetails.length) * 100;
+      }
+
+      setState(() {
+        details = fetchedDetails;
+        attendancePercentage = percentage;
+      });
+    } catch (e) {
+      print("Error fetching data: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -41,24 +89,16 @@ class _Lecturer_RecordsPageState extends State<Lecturer_RecordsPage> {
         body: Padding(
             padding: const EdgeInsets.fromLTRB(30.0, 40.0, 30.0, 0),
             child: Column(children: <Widget>[
-              Row(children: <Widget>[
-                const Text('Attendance',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-                const Expanded(child: SizedBox()),
-                ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => RecordGraphPage()),
-                );
-                    },
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromRGBO(22, 22, 151, 100),
-                        padding: const EdgeInsets.fromLTRB(10, 0, 10, 0)),
-                    child: const Text('View Graph',
-                        style: TextStyle(fontSize: 18, color: Colors.white))),
-              ]),
+              const Text('Attendance',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+              const SizedBox(height: 20),
+              Text(
+                'Overall Attendance: ${attendancePercentage.toStringAsFixed(2)}%',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color: Colors.blueAccent),
+              ),
               const SizedBox(height: 20),
               SizedBox(
                 height: 500,
@@ -99,5 +139,6 @@ class AttendanceDetail {
   final String name;
   final bool attendance;
 
-  AttendanceDetail({required this.index, required this.name, required this.attendance});
+  AttendanceDetail(
+      {required this.index, required this.name, required this.attendance});
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:helloapp/students/Student_View_Profile.dart';
-import 'Lecturer_RecordsPage.dart';
+import 'Lecturer_View_Records.dart';
 import 'Lecturer_Take_Attendance.dart';
 import 'Lecturer_Timetable.dart';
 import 'Lecturer_ProfilePage.dart';
@@ -34,7 +33,7 @@ class _LecturerHomePageState extends State<LecturerHomePage> {
       }
 
       DocumentSnapshot snapshot = await FirebaseFirestore.instance
-          .collection('Users')
+          .collection('Lecturers')
           .doc(widget.email)
           .get();
 
@@ -102,9 +101,8 @@ class _LecturerHomePageState extends State<LecturerHomePage> {
     final List<Widget> _widgetOptions = <Widget>[
       HomeWidget(lecturerName: lecturerName, lessons: todayLessons),
       LecturerTimetable(),
-      const Lecturer_RecordsPage(),
+      LecturerRecordsPage(),
       LecturerProfilePage(), 
-      // Make sure you have a LecturerProfilePage class
     ];
 
     return Scaffold(
