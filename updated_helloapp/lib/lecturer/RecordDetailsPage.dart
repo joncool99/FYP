@@ -43,13 +43,6 @@ class _RecordsDetailState extends State<RecordsDetail> {
       for (var doc in querySnapshot.docs) {
         bool isPresent = doc['status'] == 'present';
         if (isPresent) presentCount++;
-
-        DocumentSnapshot userDoc = await FirebaseFirestore.instance
-            .collection('Users')
-            .doc(doc.id)
-            .get();
-        String userName = userDoc.exists ? userDoc['name'] : doc.id;
-
         fetchedDetails.add(
           AttendanceDetail(
             index: fetchedDetails.length + 1,
