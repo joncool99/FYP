@@ -23,6 +23,7 @@ dependencies:
   image: ^4.2.0
   syncfusion_flutter_calendar: ^25.2.7
   google_ml_kit: ^0.18.0
+  tflite_flutter: ^0.10.4
   
 
 dev_dependencies:
