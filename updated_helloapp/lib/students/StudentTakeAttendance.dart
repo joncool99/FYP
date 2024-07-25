@@ -180,6 +180,7 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
 
         await attendanceRef.set({
           'email': user.email,
+          'status': 'present',
           'timestamp': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
 
