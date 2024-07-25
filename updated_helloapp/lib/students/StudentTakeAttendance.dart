@@ -1,184 +1,279 @@
-import 'dart:math'; // Import the dart:math library for sqrt
+import 'dart:typed_data';
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:camera/camera.dart';
-import '../pre_train_model/vision_api.dart';
+import 'package:google_ml_vision/google_ml_vision.dart';
+import 'package:tflite_flutter/tflite_flutter.dart';
+import 'package:image/image.dart' as img;
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:math';
 
-class TakeAttendancePage extends StatefulWidget {
-  final String courseName;
-  final String courseId;
-  final String lessonName;
-  final String startTime;
-  final String endTime;
-  final String location;
+class StudentTakeAttendancePage extends StatefulWidget {
   final CameraDescription camera;
+  final String courseId;
+  final String courseName;
+  final String lessonName;
 
-  const TakeAttendancePage({
+  const StudentTakeAttendancePage({
     Key? key,
-    required this.courseName,
-    required this.courseId,
-    required this.lessonName,
-    required this.startTime,
-    required this.endTime,
-    required this.location,
     required this.camera,
+    required this.courseId,
+    required this.courseName,
+    required this.lessonName,
   }) : super(key: key);
 
   @override
-  _TakeAttendancePageState createState() => _TakeAttendancePageState();
+  _StudentTakeAttendancePageState createState() =>
+      _StudentTakeAttendancePageState();
 }
 
-class _TakeAttendancePageState extends State<TakeAttendancePage> {
+class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
   late CameraController _controller;
-  bool _isDetecting = false;
-  final VisionApi _visionApi = VisionApi();
+  bool _isProcessing = false;
+  late Interpreter _interpreter;
+  bool _isModelLoaded = false;
+  bool _isCameraInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = CameraController(widget.camera, ResolutionPreset.high);
-    _controller.initialize().then((_) {
-      if (!mounted) return;
-      setState(() {});
-    });
+    _initializeCamera();
+    _loadModel();
   }
 
-  Future<void> _takeAttendance(BuildContext context) async {
-    if (!_controller.value.isInitialized || _isDetecting) return;
+  Future<void> _initializeCamera() async {
+    print('Initializing camera...');
+    _controller = CameraController(widget.camera, ResolutionPreset.high);
+    try {
+      await _controller.initialize().then((_) {
+        if (!mounted) return;
+        setState(() {
+          _isCameraInitialized = true;
+        });
+        print('Camera initialized');
+      });
+    } catch (e) {
+      print('Error initializing camera: $e');
+      setState(() {
+        _isCameraInitialized = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error initializing camera: $e')),
+      );
+    }
+  }
 
-    setState(() => _isDetecting = true);
+  Future<void> _loadModel() async {
+    print('Loading model...');
+    try {
+      _interpreter = await Interpreter.fromAsset('assets/mobilefacenet.tflite');
+      setState(() {
+        _isModelLoaded = true;
+      });
+      print('Model loaded');
+    } catch (e) {
+      print('Error loading model: $e');
+      setState(() {
+        _isModelLoaded = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading model: $e')),
+      );
+    }
+  }
+
+  Future<void> _captureAndVerifyFace() async {
+    if (!_controller.value.isInitialized || !_isModelLoaded || _isProcessing) {
+      print(
+          'Button disabled. _isProcessing: $_isProcessing, _isModelLoaded: $_isModelLoaded, _controller initialized: ${_controller.value.isInitialized}');
+      return;
+    }
+
+    setState(() => _isProcessing = true);
 
     try {
+      // Capture the image
+      print('Capturing image...');
       final XFile imageFile = await _controller.takePicture();
-      final imageBytes = await imageFile.readAsBytes();
+      print('Picture taken: ${imageFile.path}');
+      final Uint8List imageBytes = await imageFile.readAsBytes();
 
-      final newEmbedding = await _visionApi.detectFaces(imageBytes);
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
-        if (userDoc.exists) {
-          final storedEmbedding = List<double>.from(userDoc['embedding']);
-          final isMatching = compareEmbeddings(storedEmbedding, newEmbedding);
-          if (isMatching) {
-            // Mark attendance
-            await FirebaseFirestore.instance
-                .collection('Courses')
-                .doc(widget.courseId)
-                .collection('Lessons')
-                .doc(widget.lessonName)
-                .collection('Attendance')
-                .doc(user.email!)
-                .set({
-              'timestamp': FieldValue.serverTimestamp(),
-              'status': 'present',
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                  content: Text('Attendance taken for ${widget.lessonName}')),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Face not recognized')),
-            );
-          }
-        }
+      // Detect faces using Google ML Vision
+      print('Detecting faces...');
+      final GoogleVisionImage visionImage =
+          GoogleVisionImage.fromFilePath(imageFile.path);
+      final FaceDetector faceDetector = GoogleVision.instance.faceDetector(
+        FaceDetectorOptions(enableLandmarks: true),
+      );
+      final List<Face> faces = await faceDetector.processImage(visionImage);
+
+      if (faces.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No face detected! Please try again.')),
+        );
+        setState(() => _isProcessing = false);
+        return;
+      }
+
+      // Extract the first detected face and get embeddings
+      print('Extracting face and getting embeddings...');
+      final Face face = faces[0];
+      final img.Image originalImage = img.decodeImage(imageBytes)!;
+      final img.Image faceImage = img.copyCrop(
+        originalImage,
+        x: face.boundingBox.left.toInt(),
+        y: face.boundingBox.top.toInt(),
+        width: face.boundingBox.width.toInt(),
+        height: face.boundingBox.height.toInt(),
+      );
+      final newEmbeddings = await _getEmbeddings(faceImage);
+
+      // Verify embeddings with stored embeddings
+      final isVerified = await _verifyFace(newEmbeddings);
+
+      if (isVerified) {
+        // Mark attendance
+        await _markAttendance();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Attendance marked successfully!')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Face not recognized. Please try again.')),
+        );
       }
     } catch (e) {
-      print("Error during attendance: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error taking attendance: $e')),
+        SnackBar(content: Text('Error during face verification: $e')),
       );
+      print('Error during face verification: $e');
     } finally {
-      setState(() => _isDetecting = false);
+      setState(() => _isProcessing = false);
     }
   }
 
-  bool compareEmbeddings(
-      List<double> storedEmbedding, List<double> newEmbedding) {
-    final distance = calculateEuclideanDistance(storedEmbedding, newEmbedding);
-    return distance < 1.0; // Define a suitable threshold
+  Future<void> _markAttendance() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final attendanceRef = FirebaseFirestore.instance
+            .collection('Courses')
+            .doc(widget.courseId)
+            .collection('Lessons')
+            .doc(widget.lessonName)
+            .collection('Attendance')
+            .doc(user.email);
+
+        await attendanceRef.set({
+          'email': user.email,
+          'timestamp': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        print('Attendance marked in Firestore!');
+      }
+    } catch (e) {
+      print('Failed to mark attendance: $e');
+    }
   }
 
-  double calculateEuclideanDistance(List<double> a, List<double> b) {
-    double sum = 0;
-    for (int i = 0; i < a.length; i++) {
-      sum += (a[i] - b[i]) * (a[i] - b[i]);
+  Future<bool> _verifyFace(List<double> newEmbeddings) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(user.email)
+          .get();
+      if (doc.exists) {
+        final storedEmbeddings = List<double>.from(doc.data()!['embeddings']);
+        final distance =
+            _calculateEuclideanDistance(storedEmbeddings, newEmbeddings);
+
+        // Define a threshold for matching faces
+        const double threshold = 1.0;
+        return distance < threshold;
+      }
     }
-    return sqrt(sum); // Use sqrt from dart:math
+    return false;
+  }
+
+  double _calculateEuclideanDistance(
+      List<double> embedding1, List<double> embedding2) {
+    double sum = 0.0;
+    for (int i = 0; i < embedding1.length; i++) {
+      sum += (embedding1[i] - embedding2[i]) * (embedding1[i] - embedding2[i]);
+    }
+    return sqrt(sum);
+  }
+
+  Future<List<double>> _getEmbeddings(img.Image faceImage) async {
+    print('Getting embeddings...');
+    // Resize and normalize the face image
+    final img.Image resizedImage =
+        img.copyResize(faceImage, width: 112, height: 112);
+    final List input = _imageToByteListFloat32(resizedImage, 112, 128, 128);
+
+    // Define input and output tensors
+    final output = List.filled(1 * 192, 0).reshape([1, 192]);
+
+    // Run inference
+    _interpreter.run(input, output);
+
+    return output[0];
+  }
+
+  List _imageToByteListFloat32(
+      img.Image image, int inputSize, double mean, double std) {
+    final Float32List convertedBytes =
+        Float32List(1 * inputSize * inputSize * 3);
+    final buffer = Float32List.view(convertedBytes.buffer);
+    int pixelIndex = 0;
+    for (int i = 0; i < inputSize; i++) {
+      for (int j = 0; j < inputSize; j++) {
+        final pixel = image.getPixel(j, i);
+        buffer[pixelIndex++] = (pixel.r - mean) / std;
+        buffer[pixelIndex++] = (pixel.g - mean) / std;
+        buffer[pixelIndex++] = (pixel.b - mean) / std;
+      }
+    }
+    return convertedBytes.buffer.asUint8List();
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _interpreter.close();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_controller.value.isInitialized) {
-      return Container();
-    }
-    return FutureBuilder(
-      future: _visionApi.loadModel(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Error loading model: ${snapshot.error}'));
-        } else {
-          return Scaffold(
-            appBar: AppBar(
-              leading: IconButton(
-                icon: Icon(Icons.arrow_back, color: Colors.black),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-              title: Text('Take Attendance',
-                  style: TextStyle(color: Colors.black)),
-              backgroundColor: Colors.white,
-              elevation: 0,
-              bottom: PreferredSize(
-                preferredSize: Size.fromHeight(4.0),
-                child: Container(
-                  color: Colors.blue[900],
-                  height: 3.0,
-                ),
-              ),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Take Attendance'),
+      ),
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (!_isCameraInitialized || !_isModelLoaded)
+            Center(child: CircularProgressIndicator())
+          else
+            Expanded(
+              child: CameraPreview(_controller),
             ),
-            body: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: <Widget>[
-                Expanded(
-                  child: CameraPreview(_controller),
-                ),
-                Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: ElevatedButton(
-                    onPressed:
-                        _isDetecting ? null : () => _takeAttendance(context),
-                    child: Text('Capture and Take Attendance',
-                        style: TextStyle(fontSize: 18)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[900],
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      minimumSize: Size(160, 50),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 20),
-              ],
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: ElevatedButton(
+              onPressed: _isProcessing || !_isModelLoaded
+                  ? null
+                  : _captureAndVerifyFace,
+              child: Text('Capture and Verify Face'),
             ),
-          );
-        }
-      },
+          ),
+        ],
+      ),
     );
   }
 }

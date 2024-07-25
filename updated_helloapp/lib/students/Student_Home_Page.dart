@@ -263,8 +263,11 @@ class HomeWidget extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => StudentRegisterFacePage(
+                            builder: (context) => StudentTakeAttendancePage(
                               camera: camera!,
+                              courseId: lesson['courseId'],
+                              courseName: lesson['courseName'],
+                              lessonName: lesson['lessonName'],
                             ),
                           ),
                         );
