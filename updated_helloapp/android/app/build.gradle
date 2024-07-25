@@ -43,7 +43,7 @@ android {
 
     defaultConfig {
         applicationId "com.example.helloapp"
-        minSdkVersion 23
+        minSdkVersion 26
         targetSdkVersion 33
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
@@ -64,7 +64,7 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
 
     // Google ML Kit Face Detection dependency
-    implementation 'com.google.mlkit:face-detection:17.0.6' // Check for the latest version
+    //implementation 'com.google.mlkit:face-detection:17.0.6' // Check for the latest version
 
     // Example of a common dependency
     implementation "androidx.core:core-ktx:1.9.0"

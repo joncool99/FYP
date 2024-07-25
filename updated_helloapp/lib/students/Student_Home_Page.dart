@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:helloapp/students/Student_View_Attendance.dart';
-import 'package:helloapp/students/Student_View_Profile.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:camera/camera.dart';
+import 'package:helloapp/students/student_registerFace.dart';
 import 'Student_Timetable.dart';
-import 'StudentTakeAttendance.dart';
+import 'Student_View_Attendance.dart';
 import 'Student_View_Profile.dart';
+import 'StudentTakeAttendance.dart';
+
 
 class StudentHomePage extends StatefulWidget {
   final String email;
@@ -19,11 +22,13 @@ class _StudentHomepageState extends State<StudentHomePage> {
   int _selectedIndex = 0;
   String studentName = '';
   List<Map<String, dynamic>> todayLessons = [];
+  CameraDescription? firstCamera;
 
   @override
   void initState() {
     super.initState();
     _fetchStudentData();
+    _initializeCamera();
   }
 
   Future<void> _fetchStudentData() async {
@@ -74,7 +79,7 @@ class _StudentHomepageState extends State<StudentHomePage> {
         for (var lessonDoc in lessonsSnapshot.docs) {
           lessons.add({
             'courseName': courseDoc.get('courseName') ?? 'No Course Name',
-            'courseId': courseDoc.get('courseId'), // Added 'courseId'
+            'courseId': courseDoc.get('courseId'),
             'lessonName': lessonDoc.get('lessonName') ?? 'No Lesson Name',
             'startTime': lessonDoc.get('startTime') ?? 'No Start Time',
             'endTime': lessonDoc.get('endTime') ?? 'No End Time',
@@ -91,6 +96,17 @@ class _StudentHomepageState extends State<StudentHomePage> {
     }
   }
 
+  Future<void> _initializeCamera() async {
+    try {
+      final cameras = await availableCameras();
+      setState(() {
+        firstCamera = cameras.first;
+      });
+    } catch (e) {
+      print('Error initializing camera: $e');
+    }
+  }
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -100,14 +116,14 @@ class _StudentHomepageState extends State<StudentHomePage> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> _widgetOptions = <Widget>[
-      HomeWidget(studentName: studentName, lessons: todayLessons),
+      HomeWidget(
+          studentName: studentName, lessons: todayLessons, camera: firstCamera),
       ViewTimetable(),
       const RecordPage(),
       ViewProfilePage(),
     ];
 
     return Scaffold(
-      
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
@@ -141,14 +157,18 @@ class _StudentHomepageState extends State<StudentHomePage> {
 class HomeWidget extends StatelessWidget {
   final String studentName;
   final List<Map<String, dynamic>> lessons;
+  final CameraDescription? camera;
 
-  const HomeWidget(
-      {super.key, required this.studentName, required this.lessons});
+  const HomeWidget({
+    Key? key,
+    required this.studentName,
+    required this.lessons,
+    required this.camera,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -238,21 +258,18 @@ class HomeWidget extends StatelessWidget {
                     ),
                   ],
                 ),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TakeAttendancePage(
-                        courseName : lesson['courseName'],
-                        courseId: lesson['courseId'],
-                        lessonName: lesson['lessonName'],
-                        startTime: lesson['startTime'],
-                        endTime: lesson['endTime'],
-                        location: lesson['location'],
-                      ),
-                    ),
-                  );
-                },
+                onTap: camera != null
+                    ? () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => StudentRegisterFacePage(
+                              camera: camera!,
+                            ),
+                          ),
+                        );
+                      }
+                    : null,
               ),
             );
           }).toList(),

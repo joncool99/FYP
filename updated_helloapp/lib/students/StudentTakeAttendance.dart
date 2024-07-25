@@ -1,14 +1,18 @@
+import 'dart:math'; // Import the dart:math library for sqrt
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:camera/camera.dart';
+import '../pre_train_model/vision_api.dart';
 
-class TakeAttendancePage extends StatelessWidget {
+class TakeAttendancePage extends StatefulWidget {
   final String courseName;
   final String courseId;
   final String lessonName;
   final String startTime;
   final String endTime;
   final String location;
+  final CameraDescription camera;
 
   const TakeAttendancePage({
     Key? key,
@@ -18,132 +22,163 @@ class TakeAttendancePage extends StatelessWidget {
     required this.startTime,
     required this.endTime,
     required this.location,
+    required this.camera,
   }) : super(key: key);
 
+  @override
+  _TakeAttendancePageState createState() => _TakeAttendancePageState();
+}
+
+class _TakeAttendancePageState extends State<TakeAttendancePage> {
+  late CameraController _controller;
+  bool _isDetecting = false;
+  final VisionApi _visionApi = VisionApi();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = CameraController(widget.camera, ResolutionPreset.high);
+    _controller.initialize().then((_) {
+      if (!mounted) return;
+      setState(() {});
+    });
+  }
+
   Future<void> _takeAttendance(BuildContext context) async {
+    if (!_controller.value.isInitialized || _isDetecting) return;
+
+    setState(() => _isDetecting = true);
+
     try {
-      // Get the current user
-      User? user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No user signed in')),
-        );
-        return;
+      final XFile imageFile = await _controller.takePicture();
+      final imageBytes = await imageFile.readAsBytes();
+
+      final newEmbedding = await _visionApi.detectFaces(imageBytes);
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        if (userDoc.exists) {
+          final storedEmbedding = List<double>.from(userDoc['embedding']);
+          final isMatching = compareEmbeddings(storedEmbedding, newEmbedding);
+          if (isMatching) {
+            // Mark attendance
+            await FirebaseFirestore.instance
+                .collection('Courses')
+                .doc(widget.courseId)
+                .collection('Lessons')
+                .doc(widget.lessonName)
+                .collection('Attendance')
+                .doc(user.email!)
+                .set({
+              'timestamp': FieldValue.serverTimestamp(),
+              'status': 'present',
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                  content: Text('Attendance taken for ${widget.lessonName}')),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Face not recognized')),
+            );
+          }
+        }
       }
-
-      String userEmail = user.email!;
-
-      // Create or update attendance record in the database
-      await FirebaseFirestore.instance
-          .collection('Courses')
-          .doc(courseId)
-          .collection('Lessons')
-          .doc(lessonName)
-          .collection('Attendance')
-          .doc(userEmail)
-          .set({
-        'timestamp': FieldValue.serverTimestamp(),
-        'status': 'present',
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Attendance taken for $lessonName')),
-      );
     } catch (e) {
+      print("Error during attendance: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to take attendance: $e')),
+        SnackBar(content: Text('Error taking attendance: $e')),
       );
+    } finally {
+      setState(() => _isDetecting = false);
     }
+  }
+
+  bool compareEmbeddings(
+      List<double> storedEmbedding, List<double> newEmbedding) {
+    final distance = calculateEuclideanDistance(storedEmbedding, newEmbedding);
+    return distance < 1.0; // Define a suitable threshold
+  }
+
+  double calculateEuclideanDistance(List<double> a, List<double> b) {
+    double sum = 0;
+    for (int i = 0; i < a.length; i++) {
+      sum += (a[i] - b[i]) * (a[i] - b[i]);
+    }
+    return sqrt(sum); // Use sqrt from dart:math
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text('Take Attendance', style: TextStyle(color: Colors.black)),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        bottom: PreferredSize(
-          preferredSize: Size.fromHeight(4.0),
-          child: Container(
-            color: Colors.blue[900],
-            height: 3.0,
-          ),
-        ),
-      ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: <Widget>[
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  const SizedBox(height: 20),
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(60, 40, 30, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text('$courseId - $lessonName',
-                            style: const TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.bold)),
-                        Text(courseName, style: const TextStyle(fontSize: 18)),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: <Widget>[
-                            const Icon(Icons.access_time, size: 18),
-                            const SizedBox(width: 5),
-                            Text('$startTime - $endTime',
-                                style: TextStyle(fontSize: 16)),
-                          ],
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: <Widget>[
-                            const Icon(Icons.place, size: 18),
-                            const SizedBox(width: 5),
-                            Text(location,
-                                style: const TextStyle(fontSize: 16)),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        Padding(
-                          padding: EdgeInsets.only(left: 0),
-                          child:
-                              Image.asset('images/face_icon.png', width: 300),
-                        ),
-                      ],
+    if (!_controller.value.isInitialized) {
+      return Container();
+    }
+    return FutureBuilder(
+      future: _visionApi.loadModel(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Error loading model: ${snapshot.error}'));
+        } else {
+          return Scaffold(
+            appBar: AppBar(
+              leading: IconButton(
+                icon: Icon(Icons.arrow_back, color: Colors.black),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              title: Text('Take Attendance',
+                  style: TextStyle(color: Colors.black)),
+              backgroundColor: Colors.white,
+              elevation: 0,
+              bottom: PreferredSize(
+                preferredSize: Size.fromHeight(4.0),
+                child: Container(
+                  color: Colors.blue[900],
+                  height: 3.0,
+                ),
+              ),
+            ),
+            body: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                Expanded(
+                  child: CameraPreview(_controller),
+                ),
+                Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: ElevatedButton(
+                    onPressed:
+                        _isDetecting ? null : () => _takeAttendance(context),
+                    child: Text('Capture and Take Attendance',
+                        style: TextStyle(fontSize: 18)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue[900],
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      minimumSize: Size(160, 50),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                ],
-              ),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.all(16.0),
-            child: ElevatedButton(
-              onPressed: () => _takeAttendance(context),
-              child: Text('Take Attendance', style: TextStyle(fontSize: 18)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue[900],
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
                 ),
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                minimumSize: Size(160, 50),
-              ),
+                SizedBox(height: 20),
+              ],
             ),
-          ),
-          SizedBox(height: 150)
-        ],
-      ),
+          );
+        }
+      },
     );
   }
 }
