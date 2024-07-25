@@ -27,6 +27,7 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
   late Interpreter _interpreter;
   bool _isModelLoaded = false;
   bool _isCameraInitialized = false;
+  List<List<double>> embeddingsList = [];
 
   @override
   void initState() {
@@ -60,8 +61,7 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
   Future<void> _loadModel() async {
     print('Loading model...');
     try {
-      _interpreter =
-          await Interpreter.fromAsset('assets/mobilefacenet.tflite');
+      _interpreter = await Interpreter.fromAsset('assets/mobilefacenet.tflite');
       setState(() {
         _isModelLoaded = true;
       });
@@ -87,52 +87,60 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
     setState(() => _isProcessing = true);
 
     try {
-      // Capture the image
-      print('Capturing image...');
-      final XFile imageFile = await _controller.takePicture();
-      print('Picture taken: ${imageFile.path}');
-      final Uint8List imageBytes = await imageFile.readAsBytes();
+      for (int i = 0; i < 5; i++) {
+        // Capture 5 images for better accuracy
+        // Capture the image
+        print('Capturing image...');
+        final XFile imageFile = await _controller.takePicture();
+        print('Picture taken: ${imageFile.path}');
+        final Uint8List imageBytes = await imageFile.readAsBytes();
 
-      // Detect faces using Google ML Vision
-      print('Detecting faces...');
-      final GoogleVisionImage visionImage =
-          GoogleVisionImage.fromFilePath(imageFile.path);
-      final FaceDetector faceDetector = GoogleVision.instance.faceDetector(
-        FaceDetectorOptions(enableLandmarks: true),
-      );
-      final List<Face> faces = await faceDetector.processImage(visionImage);
-
-      if (faces.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No face detected! Please try again.')),
+        // Detect faces using Google ML Vision
+        print('Detecting faces...');
+        final GoogleVisionImage visionImage =
+            GoogleVisionImage.fromFilePath(imageFile.path);
+        final FaceDetector faceDetector = GoogleVision.instance.faceDetector(
+          FaceDetectorOptions(enableLandmarks: true),
         );
-        setState(() => _isProcessing = false);
-        return;
+        final List<Face> faces = await faceDetector.processImage(visionImage);
+
+        if (faces.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('No face detected! Please try again.')),
+          );
+          setState(() => _isProcessing = false);
+          return;
+        }
+
+        // Extract the first detected face and get embeddings
+        print('Extracting face and getting embeddings...');
+        final Face face = faces[0];
+        final img.Image originalImage = img.decodeImage(imageBytes)!;
+        final img.Image faceImage = img.copyCrop(
+          originalImage,
+          x: face.boundingBox.left.toInt(),
+          y: face.boundingBox.top.toInt(),
+          width: face.boundingBox.width.toInt(),
+          height: face.boundingBox.height.toInt(),
+        );
+        final embeddings = await _getEmbeddings(faceImage);
+        embeddingsList.add(embeddings);
+
+        // Save face image to assets locally
+        print('Saving face image...');
+        final Directory appDocDir = await getApplicationDocumentsDirectory();
+        final String faceImagePath = path.join(appDocDir.path,
+            'face_${DateTime.now().millisecondsSinceEpoch}.png');
+        final File faceImageFile = File(faceImagePath);
+        faceImageFile.writeAsBytesSync(img.encodePng(faceImage));
+
+        await Future.delayed(Duration(seconds: 1)); // Delay between captures
       }
 
-      // Extract the first detected face and get embeddings
-      print('Extracting face and getting embeddings...');
-      final Face face = faces[0];
-      final img.Image originalImage = img.decodeImage(imageBytes)!;
-      final img.Image faceImage = img.copyCrop(
-        originalImage,
-        x: face.boundingBox.left.toInt(),
-        y: face.boundingBox.top.toInt(),
-        width: face.boundingBox.width.toInt(),
-        height: face.boundingBox.height.toInt(),
-      );
-      final embeddings = await _getEmbeddings(faceImage);
-
+      // Calculate average embeddings
+      final averageEmbeddings = _calculateAverageEmbeddings(embeddingsList);
       // Save embeddings to Firestore
-      await _saveEmbeddingsToFirestore(embeddings);
-
-      // Save face image to assets locally
-      print('Saving face image...');
-      final Directory appDocDir = await getApplicationDocumentsDirectory();
-      final String faceImagePath = path.join(
-          appDocDir.path, 'face_${DateTime.now().millisecondsSinceEpoch}.png');
-      final File faceImageFile = File(faceImagePath);
-      faceImageFile.writeAsBytesSync(img.encodePng(faceImage));
+      await _saveEmbeddingsToFirestore(averageEmbeddings);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Face registered successfully!')),
@@ -162,6 +170,23 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
     } catch (e) {
       print('Failed to save face embeddings: $e');
     }
+  }
+
+  List<double> _calculateAverageEmbeddings(List<List<double>> embeddingsList) {
+    final int length = embeddingsList.first.length;
+    final List<double> averageEmbeddings = List.filled(length, 0.0);
+
+    for (List<double> embeddings in embeddingsList) {
+      for (int i = 0; i < length; i++) {
+        averageEmbeddings[i] += embeddings[i];
+      }
+    }
+
+    for (int i = 0; i < length; i++) {
+      averageEmbeddings[i] /= embeddingsList.length;
+    }
+
+    return averageEmbeddings;
   }
 
   Future<List<double>> _getEmbeddings(img.Image faceImage) async {

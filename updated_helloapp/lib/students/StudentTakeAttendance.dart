@@ -95,44 +95,55 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
     setState(() => _isProcessing = true);
 
     try {
-      // Capture the image
-      print('Capturing image...');
-      final XFile imageFile = await _controller.takePicture();
-      print('Picture taken: ${imageFile.path}');
-      final Uint8List imageBytes = await imageFile.readAsBytes();
+      List<List<double>> newEmbeddingsList = [];
+      for (int i = 0; i < 3; i++) {
+        // Capture 3 images for better accuracy
+        // Capture the image
+        print('Capturing image...');
+        final XFile imageFile = await _controller.takePicture();
+        print('Picture taken: ${imageFile.path}');
+        final Uint8List imageBytes = await imageFile.readAsBytes();
 
-      // Detect faces using Google ML Vision
-      print('Detecting faces...');
-      final GoogleVisionImage visionImage =
-          GoogleVisionImage.fromFilePath(imageFile.path);
-      final FaceDetector faceDetector = GoogleVision.instance.faceDetector(
-        FaceDetectorOptions(enableLandmarks: true),
-      );
-      final List<Face> faces = await faceDetector.processImage(visionImage);
-
-      if (faces.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No face detected! Please try again.')),
+        // Detect faces using Google ML Vision
+        print('Detecting faces...');
+        final GoogleVisionImage visionImage =
+            GoogleVisionImage.fromFilePath(imageFile.path);
+        final FaceDetector faceDetector = GoogleVision.instance.faceDetector(
+          FaceDetectorOptions(enableLandmarks: true),
         );
-        setState(() => _isProcessing = false);
-        return;
+        final List<Face> faces = await faceDetector.processImage(visionImage);
+
+        if (faces.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('No face detected! Please try again.')),
+          );
+          setState(() => _isProcessing = false);
+          return;
+        }
+
+        // Extract the first detected face and get embeddings
+        print('Extracting face and getting embeddings...');
+        final Face face = faces[0];
+        final img.Image originalImage = img.decodeImage(imageBytes)!;
+        final img.Image faceImage = img.copyCrop(
+          originalImage,
+          x: face.boundingBox.left.toInt(),
+          y: face.boundingBox.top.toInt(),
+          width: face.boundingBox.width.toInt(),
+          height: face.boundingBox.height.toInt(),
+        );
+        final newEmbeddings = await _getEmbeddings(faceImage);
+        newEmbeddingsList.add(newEmbeddings);
+
+        await Future.delayed(Duration(seconds: 1)); // Delay between captures
       }
 
-      // Extract the first detected face and get embeddings
-      print('Extracting face and getting embeddings...');
-      final Face face = faces[0];
-      final img.Image originalImage = img.decodeImage(imageBytes)!;
-      final img.Image faceImage = img.copyCrop(
-        originalImage,
-        x: face.boundingBox.left.toInt(),
-        y: face.boundingBox.top.toInt(),
-        width: face.boundingBox.width.toInt(),
-        height: face.boundingBox.height.toInt(),
-      );
-      final newEmbeddings = await _getEmbeddings(faceImage);
+      // Calculate average embeddings for verification
+      final averageNewEmbeddings =
+          _calculateAverageEmbeddings(newEmbeddingsList);
 
       // Verify embeddings with stored embeddings
-      final isVerified = await _verifyFace(newEmbeddings);
+      final isVerified = await _verifyFace(averageNewEmbeddings);
 
       if (isVerified) {
         // Mark attendance
@@ -188,24 +199,54 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
           .get();
       if (doc.exists) {
         final storedEmbeddings = List<double>.from(doc.data()!['embeddings']);
-        final distance =
-            _calculateEuclideanDistance(storedEmbeddings, newEmbeddings);
+        final similarity =
+            _calculateCosineSimilarity(storedEmbeddings, newEmbeddings);
 
         // Define a threshold for matching faces
-        const double threshold = 1.0;
-        return distance < threshold;
+        const double threshold = 0.7; // Adjust this value for higher accuracy
+        return similarity > threshold;
       }
     }
     return false;
   }
 
-  double _calculateEuclideanDistance(
-      List<double> embedding1, List<double> embedding2) {
-    double sum = 0.0;
-    for (int i = 0; i < embedding1.length; i++) {
-      sum += (embedding1[i] - embedding2[i]) * (embedding1[i] - embedding2[i]);
+  double _calculateCosineSimilarity(
+      List<double> vectorA, List<double> vectorB) {
+    double dotProduct = 0.0;
+    double magnitudeA = 0.0;
+    double magnitudeB = 0.0;
+
+    for (int i = 0; i < vectorA.length; i++) {
+      dotProduct += vectorA[i] * vectorB[i];
+      magnitudeA += vectorA[i] * vectorA[i];
+      magnitudeB += vectorB[i] * vectorB[i];
     }
-    return sqrt(sum);
+
+    magnitudeA = sqrt(magnitudeA);
+    magnitudeB = sqrt(magnitudeB);
+
+    if (magnitudeA != 0.0 && magnitudeB != 0.0) {
+      return dotProduct / (magnitudeA * magnitudeB);
+    } else {
+      return 0.0;
+    }
+  }
+
+  List<double> _calculateAverageEmbeddings(List<List<double>> embeddingsList) {
+    final int length = embeddingsList.first.length;
+    final List<double> averageEmbeddings = List.filled(length, 0.0);
+
+    for (List<double> embeddings in embeddingsList) {
+      for (int i = 0; i < length; i++) {
+        averageEmbeddings[i] += embeddings[i];
+      }
+    }
+
+    for (int i = 0; i < length; i++) {
+      averageEmbeddings[i] /= embeddingsList.length;
+    }
+
+    return averageEmbeddings;
   }
 
   Future<List<double>> _getEmbeddings(img.Image faceImage) async {
