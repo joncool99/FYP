@@ -120,11 +120,18 @@ class _LecturerTakeAttendancePageState
         embeddingsList.add(embeddings);
       }
 
-      await _identifyAndMarkAttendance(embeddingsList);
+      final matchedFacesCount =
+          await _identifyAndMarkAttendance(embeddingsList);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Attendance marked successfully!')),
-      );
+      if (matchedFacesCount > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Attendance marked successfully!')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No matching faces found!')),
+        );
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error during face processing: $e')),
@@ -135,15 +142,18 @@ class _LecturerTakeAttendancePageState
     }
   }
 
-  Future<void> _identifyAndMarkAttendance(
+  Future<int> _identifyAndMarkAttendance(
       List<List<double>> embeddingsList) async {
     _identifiedStudents.clear();
     final usersSnapshot =
         await FirebaseFirestore.instance.collection('Users').get();
+    int matchedFacesCount = 0;
+
     for (var userDoc in usersSnapshot.docs) {
       final storedEmbeddings = (userDoc.data()['embeddings'] as List)
           .map((e) => e is double ? e : double.tryParse(e.toString()) ?? 0.0)
           .toList();
+
       for (var newEmbeddings in embeddingsList) {
         final similarity =
             _calculateCosineSimilarity(storedEmbeddings, newEmbeddings);
@@ -151,11 +161,13 @@ class _LecturerTakeAttendancePageState
           // Adjust threshold for higher accuracy
           _identifiedStudents.add(userDoc.id);
           await _markAttendance(userDoc.id);
+          matchedFacesCount++;
           break;
         }
       }
     }
     setState(() {});
+    return matchedFacesCount;
   }
 
   Future<void> _markAttendance(String email) async {
@@ -253,36 +265,38 @@ class _LecturerTakeAttendancePageState
       appBar: AppBar(
         title: Text('Lecturer Take Attendance'),
       ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (_imageFile != null) Image.file(_imageFile!),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton(
-              onPressed: _isProcessing || !_isModelLoaded ? null : _pickImage,
-              child: Text('Pick Group Photo'),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton(
-              onPressed:
-                  _isProcessing || !_isModelLoaded ? null : _processImage,
-              child: Text('Process and Mark Attendance'),
-            ),
-          ),
-          if (_identifiedStudents.isNotEmpty)
+      body: SingleChildScrollView(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (_imageFile != null) Image.file(_imageFile!),
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  Text('Identified Students:'),
-                  ..._identifiedStudents.map((email) => Text(email)).toList(),
-                ],
+              child: ElevatedButton(
+                onPressed: _isProcessing || !_isModelLoaded ? null : _pickImage,
+                child: Text('Pick Image'),
               ),
             ),
-        ],
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ElevatedButton(
+                onPressed:
+                    _isProcessing || !_isModelLoaded ? null : _processImage,
+                child: Text('Process and Mark Attendance'),
+              ),
+            ),
+            if (_identifiedStudents.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    Text('Identified Students:'),
+                    ..._identifiedStudents.map((email) => Text(email)).toList(),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
