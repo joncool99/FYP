@@ -155,19 +155,26 @@ class _LecturerTakeAttendancePageState
     int matchedFacesCount = 0;
 
     for (var userDoc in usersSnapshot.docs) {
-      final storedEmbeddings = (userDoc.data()['embeddings'] as List)
+      final userData = userDoc.data();
+      final storedEmbeddings = userData['embeddings'] as List<dynamic>?;
+
+      if (storedEmbeddings == null) {
+        print('No embeddings found for user: ${userDoc.id}');
+        continue;
+      }
+
+      final convertedEmbeddings = storedEmbeddings
           .map((e) => e is double ? e : double.tryParse(e.toString()) ?? 0.0)
           .toList();
 
       for (var newEmbeddings in embeddingsList) {
         final similarity =
-            _calculateCosineSimilarity(storedEmbeddings, newEmbeddings);
+            _calculateCosineSimilarity(convertedEmbeddings, newEmbeddings);
         if (similarity > 0.7) {
           // Adjust threshold for higher accuracy
-          final firstName = userDoc.data()['firstName'] ?? 'Unknown';
-          final lastName = userDoc.data()['lastName'] ?? 'Unknown';
-          final studentId = userDoc.data()['studentId'] ?? 'Unknown';
-          _identifiedStudents.add('$firstName $lastName' '($studentId)');
+          final firstName = userData['firstName'] ?? 'Unknown';
+          final lastName = userData['lastName'] ?? 'Unknown';
+          _identifiedStudents.add('$firstName $lastName');
           await _markAttendance(userDoc.id);
           matchedFacesCount++;
           break;
@@ -177,6 +184,7 @@ class _LecturerTakeAttendancePageState
     setState(() {});
     return matchedFacesCount;
   }
+
 
 
   Future<void> _markAttendance(String email) async {
