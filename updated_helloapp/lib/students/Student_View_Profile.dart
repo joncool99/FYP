@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:camera/camera.dart';
+import 'package:helloapp/login.dart';
+import 'package:helloapp/students/Student_update_password.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'student_registerFace.dart';
+
 
 class ViewProfilePage extends StatefulWidget {
   @override
@@ -200,10 +203,59 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
                               );
                             }
                           : null,
-                      child:
-                          Text('Register Face', style: TextStyle(fontSize: 18)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue[900],
+                        backgroundColor: const Color.fromRGBO(22, 22, 151, 100),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        minimumSize: Size(160, 50),
+                      ),
+                      child:
+                          const Text('Register Face', style: TextStyle(fontSize: 18)),
+                    ),
+
+
+
+                    const SizedBox(height: 20),
+
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                ChangePasswordPage(user: _user!),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromRGBO(22, 22, 151, 100),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        minimumSize: Size(160, 50),
+                      ),
+                      child:
+                         const Text('Change Password', style: TextStyle(fontSize: 18)),
+                    ),
+
+
+                    // sign out button
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: () {
+                        _auth.signOut();
+                        Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => LoginPage()), (route) => false);
+                      },
+                      child: Text('Sign Out', style: TextStyle(fontSize: 18)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
