@@ -8,7 +8,6 @@ import 'Student_View_Attendance.dart';
 import 'Student_View_Profile.dart';
 import 'StudentTakeAttendance.dart';
 
-
 class StudentHomePage extends StatefulWidget {
   final String email;
 
@@ -21,6 +20,7 @@ class StudentHomePage extends StatefulWidget {
 class _StudentHomepageState extends State<StudentHomePage> {
   int _selectedIndex = 0;
   String studentName = '';
+  String? profilePhotoUrl;
   List<Map<String, dynamic>> todayLessons = [];
   CameraDescription? firstCamera;
 
@@ -46,6 +46,7 @@ class _StudentHomepageState extends State<StudentHomePage> {
       if (snapshot.exists) {
         setState(() {
           studentName = snapshot.get('firstName') ?? 'Student';
+          profilePhotoUrl = snapshot.get('imageUrl');
         });
         _fetchTodayLessons();
       } else {
@@ -117,7 +118,10 @@ class _StudentHomepageState extends State<StudentHomePage> {
   Widget build(BuildContext context) {
     final List<Widget> _widgetOptions = <Widget>[
       HomeWidget(
-          studentName: studentName, lessons: todayLessons, camera: firstCamera),
+          studentName: studentName,
+          profilePhotoUrl: profilePhotoUrl,
+          lessons: todayLessons,
+          camera: firstCamera),
       ViewTimetable(),
       const RecordPage(),
       ViewProfilePage(),
@@ -156,12 +160,14 @@ class _StudentHomepageState extends State<StudentHomePage> {
 
 class HomeWidget extends StatelessWidget {
   final String studentName;
+  final String? profilePhotoUrl;
   final List<Map<String, dynamic>> lessons;
   final CameraDescription? camera;
 
   const HomeWidget({
     Key? key,
     required this.studentName,
+    required this.profilePhotoUrl,
     required this.lessons,
     required this.camera,
   }) : super(key: key);
@@ -177,9 +183,13 @@ class HomeWidget extends StatelessWidget {
             padding: const EdgeInsets.all(16.0),
             child: Row(
               children: <Widget>[
-                const CircleAvatar(
-                  backgroundColor: Colors.orange,
-                  child: Icon(Icons.person, color: Colors.white),
+                CircleAvatar(
+                  backgroundImage: profilePhotoUrl != null
+                      ? NetworkImage(profilePhotoUrl!)
+                      : const AssetImage('assets/images/default_user.png')
+                          as ImageProvider,
+                  backgroundColor: Colors.grey,
+                  radius: 30,
                 ),
                 const SizedBox(width: 10),
                 Column(

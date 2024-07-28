@@ -17,6 +17,7 @@ class LecturerHomePage extends StatefulWidget {
 class _LecturerHomePageState extends State<LecturerHomePage> {
   int _selectedIndex = 0;
   String lecturerName = '';
+  String? profilePhotoUrl;
   List<Map<String, dynamic>> todayLessons = [];
 
   @override
@@ -40,6 +41,7 @@ class _LecturerHomePageState extends State<LecturerHomePage> {
       if (snapshot.exists) {
         setState(() {
           lecturerName = snapshot.get('firstName') ?? 'Lecturer';
+          profilePhotoUrl = snapshot.get('imageUrl');
         });
         _fetchTodayLessons();
       } else {
@@ -99,10 +101,13 @@ class _LecturerHomePageState extends State<LecturerHomePage> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> _widgetOptions = <Widget>[
-      HomeWidget(lecturerName: lecturerName, lessons: todayLessons),
+      HomeWidget(
+          lecturerName: lecturerName,
+          profilePhotoUrl: profilePhotoUrl,
+          lessons: todayLessons),
       LecturerTimetable(),
       LecturerRecordsPage(),
-      LecturerProfilePage(), 
+      LecturerProfilePage(),
     ];
 
     return Scaffold(
@@ -110,7 +115,10 @@ class _LecturerHomePageState extends State<LecturerHomePage> {
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color.fromARGB(255, 220, 26, 26), Color.fromARGB(255, 238, 134, 134)],
+            colors: [
+              Color.fromARGB(255, 220, 26, 26),
+              Color.fromARGB(255, 238, 134, 134)
+            ],
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
@@ -138,10 +146,14 @@ class _LecturerHomePageState extends State<LecturerHomePage> {
 
 class HomeWidget extends StatelessWidget {
   final String lecturerName;
+  final String? profilePhotoUrl;
   final List<Map<String, dynamic>> lessons;
 
   const HomeWidget(
-      {super.key, required this.lecturerName, required this.lessons});
+      {super.key,
+      required this.lecturerName,
+      required this.profilePhotoUrl,
+      required this.lessons});
 
   @override
   Widget build(BuildContext context) {
@@ -154,9 +166,13 @@ class HomeWidget extends StatelessWidget {
             padding: const EdgeInsets.all(16.0),
             child: Row(
               children: <Widget>[
-                const CircleAvatar(
-                  backgroundColor: Colors.orange,
-                  child: Icon(Icons.person, color: Colors.white),
+                CircleAvatar(
+                  backgroundImage: profilePhotoUrl != null
+                      ? NetworkImage(profilePhotoUrl!)
+                      : const AssetImage('assets/images/default_user.png')
+                          as ImageProvider,
+                  backgroundColor: Colors.grey,
+                  radius: 30,
                 ),
                 const SizedBox(width: 10),
                 Column(
