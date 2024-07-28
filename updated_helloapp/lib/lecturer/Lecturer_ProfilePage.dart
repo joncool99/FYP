@@ -107,7 +107,7 @@ class _LecturerProfilePageState extends State<LecturerProfilePage> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Lecturer ID: ${_userData!['lecturerId']}',
+                      'Lecturer ID: ${_userData!['studentId']}',
                       style: const TextStyle(fontSize: 18),
                     ),
                     const SizedBox(height: 20),

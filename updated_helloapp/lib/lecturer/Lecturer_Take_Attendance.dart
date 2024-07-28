@@ -72,6 +72,7 @@ class _LecturerTakeAttendancePageState
       if (pickedFile != null) {
         setState(() {
           _imageFile = File(pickedFile.path);
+          _identifiedStudents.clear(); // Clear the identified students list
         });
       }
     } catch (e) {
@@ -89,6 +90,10 @@ class _LecturerTakeAttendancePageState
     setState(() => _isProcessing = true);
 
     try {
+      if (!_imageFile!.path.endsWith('.jpg') && !_imageFile!.path.endsWith('.jpeg')) {
+        throw Exception('Please upload an image in JPEG format.');
+      }
+
       final Uint8List imageBytes = await _imageFile!.readAsBytes();
       final GoogleVisionImage visionImage =
           GoogleVisionImage.fromFile(_imageFile!);
@@ -159,7 +164,10 @@ class _LecturerTakeAttendancePageState
             _calculateCosineSimilarity(storedEmbeddings, newEmbeddings);
         if (similarity > 0.7) {
           // Adjust threshold for higher accuracy
-          _identifiedStudents.add(userDoc.id);
+          final firstName = userDoc.data()['firstName'] ?? 'Unknown';
+          final lastName = userDoc.data()['lastName'] ?? 'Unknown';
+          final studentId = userDoc.data()['studentId'] ?? 'Unknown';
+          _identifiedStudents.add('$firstName $lastName' '($studentId)');
           await _markAttendance(userDoc.id);
           matchedFacesCount++;
           break;
@@ -169,6 +177,7 @@ class _LecturerTakeAttendancePageState
     setState(() {});
     return matchedFacesCount;
   }
+
 
   Future<void> _markAttendance(String email) async {
     try {
@@ -259,31 +268,49 @@ class _LecturerTakeAttendancePageState
     super.dispose();
   }
 
+ 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Lecturer Take Attendance'),
-      ),
-      body: SingleChildScrollView(
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: Text('Lecturer Take Attendance'),
+    ),
+    body: Center(
+      child: SingleChildScrollView(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            if (_imageFile != null) Image.file(_imageFile!),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ElevatedButton(
-                onPressed: _isProcessing || !_isModelLoaded ? null : _pickImage,
-                child: Text('Pick Image'),
+            Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey),
+                borderRadius: BorderRadius.circular(10),
               ),
+              child: _imageFile != null
+                  ? Image.file(_imageFile!)
+                  : Center(child: Text('Upload Class photo')),
             ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ElevatedButton(
-                onPressed:
-                    _isProcessing || !_isModelLoaded ? null : _processImage,
-                child: Text('Process and Mark Attendance'),
-              ),
+            SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: ElevatedButton(
+                    onPressed: _isProcessing || !_isModelLoaded ? null : _pickImage,
+                    child: Text('Pick Image'),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: ElevatedButton(
+                    onPressed: _isProcessing || !_isModelLoaded ? null : _processImage,
+                    child: Text('Process and Mark Attendance'),
+                  ),
+                ),
+              ],
             ),
             if (_identifiedStudents.isNotEmpty)
               Padding(
@@ -291,13 +318,14 @@ class _LecturerTakeAttendancePageState
                 child: Column(
                   children: [
                     Text('Identified Students:'),
-                    ..._identifiedStudents.map((email) => Text(email)).toList(),
+                    ..._identifiedStudents.map((name) => Text(name)).toList(),
                   ],
                 ),
               ),
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
 }
+    }
