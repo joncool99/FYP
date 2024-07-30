@@ -90,7 +90,8 @@ class _LecturerTakeAttendancePageState
     setState(() => _isProcessing = true);
 
     try {
-      if (!_imageFile!.path.endsWith('.jpg') && !_imageFile!.path.endsWith('.jpeg')) {
+      if (!_imageFile!.path.endsWith('.jpg') &&
+          !_imageFile!.path.endsWith('.jpeg')) {
         throw Exception('Please upload an image in JPEG format.');
       }
 
@@ -116,10 +117,10 @@ class _LecturerTakeAttendancePageState
       for (Face face in faces) {
         final img.Image faceImage = img.copyCrop(
           originalImage,
-          x: face.boundingBox.left.toInt(),
-          y: face.boundingBox.top.toInt(),
-          width: face.boundingBox.width.toInt(),
-          height: face.boundingBox.height.toInt(),
+          face.boundingBox.left.toInt(),
+          face.boundingBox.top.toInt(),
+          face.boundingBox.width.toInt(),
+          face.boundingBox.height.toInt(),
         );
         final embeddings = await _getEmbeddings(faceImage);
         embeddingsList.add(embeddings);
@@ -184,8 +185,6 @@ class _LecturerTakeAttendancePageState
     setState(() {});
     return matchedFacesCount;
   }
-
-
 
   Future<void> _markAttendance(String email) async {
     try {
@@ -262,9 +261,9 @@ class _LecturerTakeAttendancePageState
     for (int i = 0; i < inputSize; i++) {
       for (int j = 0; j < inputSize; j++) {
         final pixel = image.getPixel(j, i);
-        buffer[pixelIndex++] = (pixel.r - mean) / std;
-        buffer[pixelIndex++] = (pixel.g - mean) / std;
-        buffer[pixelIndex++] = (pixel.b - mean) / std;
+        buffer[pixelIndex++] = (img.getRed(pixel) - mean) / std;
+        buffer[pixelIndex++] = (img.getGreen(pixel) - mean) / std;
+        buffer[pixelIndex++] = (img.getBlue(pixel) - mean) / std;
       }
     }
     return convertedBytes.buffer.asUint8List();
@@ -276,64 +275,66 @@ class _LecturerTakeAttendancePageState
     super.dispose();
   }
 
- 
   @override
-Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      title: Text('Lecturer Take Attendance'),
-    ),
-    body: Center(
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(10),
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Lecturer Take Attendance'),
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: _imageFile != null
+                    ? Image.file(_imageFile!)
+                    : Center(child: Text('Upload Class photo')),
               ),
-              child: _imageFile != null
-                  ? Image.file(_imageFile!)
-                  : Center(child: Text('Upload Class photo')),
-            ),
-            SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
+              SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ElevatedButton(
+                      onPressed:
+                          _isProcessing || !_isModelLoaded ? null : _pickImage,
+                      child: Text('Pick Image'),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ElevatedButton(
+                      onPressed: _isProcessing || !_isModelLoaded
+                          ? null
+                          : _processImage,
+                      child: Text('Process and Mark Attendance'),
+                    ),
+                  ),
+                ],
+              ),
+              if (_identifiedStudents.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: ElevatedButton(
-                    onPressed: _isProcessing || !_isModelLoaded ? null : _pickImage,
-                    child: Text('Pick Image'),
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      Text('Identified Students:'),
+                      ..._identifiedStudents.map((name) => Text(name)).toList(),
+                    ],
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: ElevatedButton(
-                    onPressed: _isProcessing || !_isModelLoaded ? null : _processImage,
-                    child: Text('Process and Mark Attendance'),
-                  ),
-                ),
-              ],
-            ),
-            if (_identifiedStudents.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    Text('Identified Students:'),
-                    ..._identifiedStudents.map((name) => Text(name)).toList(),
-                  ],
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
-    }

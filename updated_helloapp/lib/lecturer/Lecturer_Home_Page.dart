@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:camera/camera.dart';
+import 'package:helloapp/lecturer/Live_face_recognition.dart';
 import 'Lecturer_View_Records.dart';
 import 'Lecturer_Take_Attendance.dart';
 import 'Lecturer_Timetable.dart';
@@ -19,11 +21,25 @@ class _LecturerHomePageState extends State<LecturerHomePage> {
   String lecturerName = '';
   String? profilePhotoUrl;
   List<Map<String, dynamic>> todayLessons = [];
+  CameraDescription? cameraDescription;
 
   @override
   void initState() {
     super.initState();
     _fetchLecturerData();
+    _initializeCamera();
+  }
+
+  Future<void> _initializeCamera() async {
+    try {
+      final cameras = await availableCameras();
+      cameraDescription = cameras.firstWhere(
+        (camera) => camera.lensDirection == CameraLensDirection.front,
+        orElse: () => cameras.first,
+      );
+    } catch (e) {
+      print('Error initializing camera: $e');
+    }
   }
 
   Future<void> _fetchLecturerData() async {
@@ -102,12 +118,19 @@ class _LecturerHomePageState extends State<LecturerHomePage> {
   Widget build(BuildContext context) {
     final List<Widget> _widgetOptions = <Widget>[
       HomeWidget(
-          lecturerName: lecturerName,
-          profilePhotoUrl: profilePhotoUrl,
-          lessons: todayLessons),
+        lecturerName: lecturerName,
+        profilePhotoUrl: profilePhotoUrl,
+        lessons: todayLessons,
+      ),
       LecturerTimetable(),
       LecturerRecordsPage(),
       LecturerProfilePage(),
+      if (cameraDescription != null)
+        LiveFaceRecognitionPage(camera: cameraDescription!)
+      else
+        Center(
+            child:
+                CircularProgressIndicator()), // Show loading indicator while camera initializes
     ];
 
     return Scaffold(
@@ -137,6 +160,8 @@ class _LecturerHomePageState extends State<LecturerHomePage> {
             BottomNavigationBarItem(
                 icon: Icon(Icons.check_box), label: 'Records'),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.camera_alt), label: 'Face Recognition'),
           ],
         ),
       ),
@@ -149,11 +174,12 @@ class HomeWidget extends StatelessWidget {
   final String? profilePhotoUrl;
   final List<Map<String, dynamic>> lessons;
 
-  const HomeWidget(
-      {super.key,
-      required this.lecturerName,
-      required this.profilePhotoUrl,
-      required this.lessons});
+  const HomeWidget({
+    super.key,
+    required this.lecturerName,
+    required this.profilePhotoUrl,
+    required this.lessons,
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -118,10 +118,10 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
         final img.Image originalImage = img.decodeImage(imageBytes)!;
         final img.Image faceImage = img.copyCrop(
           originalImage,
-          x: face.boundingBox.left.toInt(),
-          y: face.boundingBox.top.toInt(),
-          width: face.boundingBox.width.toInt(),
-          height: face.boundingBox.height.toInt(),
+          face.boundingBox.left.toInt(),
+          face.boundingBox.top.toInt(),
+          face.boundingBox.width.toInt(),
+          face.boundingBox.height.toInt(),
         );
         final embeddings = await _getEmbeddings(faceImage);
         embeddingsList.add(embeddings);
@@ -213,10 +213,13 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
     int pixelIndex = 0;
     for (int i = 0; i < inputSize; i++) {
       for (int j = 0; j < inputSize; j++) {
-        final pixel = image.getPixel(j, i);
-        buffer[pixelIndex++] = (pixel.r - mean) / std;
-        buffer[pixelIndex++] = (pixel.g - mean) / std;
-        buffer[pixelIndex++] = (pixel.b - mean) / std;
+        final int pixel = image.getPixel(j, i);
+        final int r = img.getRed(pixel); // Extract red value
+        final int g = img.getGreen(pixel); // Extract green value
+        final int b = img.getBlue(pixel); // Extract blue value
+        buffer[pixelIndex++] = (r - mean) / std;
+        buffer[pixelIndex++] = (g - mean) / std;
+        buffer[pixelIndex++] = (b - mean) / std;
       }
     }
     return convertedBytes.buffer.asUint8List();
