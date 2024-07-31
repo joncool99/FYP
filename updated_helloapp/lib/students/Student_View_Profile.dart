@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:camera/camera.dart';
+import 'package:helloapp/login.dart';
+import 'package:helloapp/students/Student_update_password.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'student_registerFace.dart';
+
 
 class ViewProfilePage extends StatefulWidget {
   @override
@@ -12,12 +18,14 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
   User? _user;
   Map<String, dynamic>? _userData;
   List<Map<String, dynamic>> enrolledCourses = [];
+  CameraDescription? firstCamera;
 
   @override
   void initState() {
     super.initState();
     _user = _auth.currentUser;
     _fetchUserData();
+    _initializeCamera();
   }
 
   Future<void> _fetchUserData() async {
@@ -45,6 +53,33 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
             .map((doc) => doc.data() as Map<String, dynamic>)
             .toList();
       });
+    }
+  }
+
+  Future<void> _initializeCamera() async {
+    try {
+      var status = await Permission.camera.status;
+      if (status.isDenied) {
+        status = await Permission.camera.request();
+      }
+
+      if (status.isGranted) {
+        final cameras = await availableCameras();
+        if (cameras.isNotEmpty) {
+          setState(() {
+            firstCamera = cameras.first;
+          });
+        } else {
+          setState(() {
+            firstCamera = null; // Handle no cameras available
+          });
+          print('No cameras available');
+        }
+      } else {
+        print('Camera permission not granted');
+      }
+    } catch (e) {
+      print('Error initializing camera: $e');
     }
   }
 
@@ -155,6 +190,81 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
                               );
                             },
                           ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: firstCamera != null
+                          ? () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => StudentRegisterFacePage(
+                                      camera: firstCamera!),
+                                ),
+                              );
+                            }
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromRGBO(22, 22, 151, 100),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        minimumSize: Size(160, 50),
+                      ),
+                      child:
+                          const Text('Register Face', style: TextStyle(fontSize: 18)),
+                    ),
+
+
+
+                    const SizedBox(height: 20),
+
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                ChangePasswordPage(user: _user!),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromRGBO(22, 22, 151, 100),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        minimumSize: Size(160, 50),
+                      ),
+                      child:
+                         const Text('Change Password', style: TextStyle(fontSize: 18)),
+                    ),
+
+
+                    // sign out button
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: () {
+                        _auth.signOut();
+                        Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => LoginPage()), (route) => false);
+                      },
+                      child: Text('Sign Out', style: TextStyle(fontSize: 18)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        minimumSize: Size(160, 50),
+                      ),
+                    ),
                   ],
                 ),
               ),

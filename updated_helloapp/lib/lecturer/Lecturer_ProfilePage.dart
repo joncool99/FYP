@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:helloapp/login.dart';
 
 class LecturerProfilePage extends StatefulWidget {
   @override
@@ -107,7 +108,7 @@ class _LecturerProfilePageState extends State<LecturerProfilePage> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Lecturer ID: ${_userData!['lecturerId']}',
+                      'Lecturer ID: ${_userData!['studentId']}',
                       style: const TextStyle(fontSize: 18),
                     ),
                     const SizedBox(height: 20),
@@ -150,6 +151,28 @@ class _LecturerProfilePageState extends State<LecturerProfilePage> {
                               );
                             },
                           ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: () {
+                        _auth.signOut();
+                        Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const LoginPage()),
+                            (route) => false);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        minimumSize: const Size(160, 50),
+                      ),
+                      child: const Text('Sign Out', style: TextStyle(fontSize: 18)),
+                    ),
                   ],
                 ),
               ),

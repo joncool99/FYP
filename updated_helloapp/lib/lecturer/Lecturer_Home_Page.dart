@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:camera/camera.dart';
+import 'package:helloapp/lecturer/Live_face_recognition.dart';
 import 'Lecturer_View_Records.dart';
 import 'Lecturer_Take_Attendance.dart';
 import 'Lecturer_Timetable.dart';
@@ -17,12 +19,27 @@ class LecturerHomePage extends StatefulWidget {
 class _LecturerHomePageState extends State<LecturerHomePage> {
   int _selectedIndex = 0;
   String lecturerName = '';
+  String? profilePhotoUrl;
   List<Map<String, dynamic>> todayLessons = [];
+  CameraDescription? cameraDescription;
 
   @override
   void initState() {
     super.initState();
     _fetchLecturerData();
+    _initializeCamera();
+  }
+
+  Future<void> _initializeCamera() async {
+    try {
+      final cameras = await availableCameras();
+      cameraDescription = cameras.firstWhere(
+        (camera) => camera.lensDirection == CameraLensDirection.front,
+        orElse: () => cameras.first,
+      );
+    } catch (e) {
+      print('Error initializing camera: $e');
+    }
   }
 
   Future<void> _fetchLecturerData() async {
@@ -40,6 +57,7 @@ class _LecturerHomePageState extends State<LecturerHomePage> {
       if (snapshot.exists) {
         setState(() {
           lecturerName = snapshot.get('firstName') ?? 'Lecturer';
+          profilePhotoUrl = snapshot.get('imageUrl');
         });
         _fetchTodayLessons();
       } else {
@@ -99,10 +117,20 @@ class _LecturerHomePageState extends State<LecturerHomePage> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> _widgetOptions = <Widget>[
-      HomeWidget(lecturerName: lecturerName, lessons: todayLessons),
+      HomeWidget(
+        lecturerName: lecturerName,
+        profilePhotoUrl: profilePhotoUrl,
+        lessons: todayLessons,
+      ),
       LecturerTimetable(),
       LecturerRecordsPage(),
-      LecturerProfilePage(), 
+      LecturerProfilePage(),
+      if (cameraDescription != null)
+        LiveFaceRecognitionPage(camera: cameraDescription!)
+      else
+        Center(
+            child:
+                CircularProgressIndicator()), // Show loading indicator while camera initializes
     ];
 
     return Scaffold(
@@ -110,7 +138,10 @@ class _LecturerHomePageState extends State<LecturerHomePage> {
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color.fromARGB(255, 220, 26, 26), Color.fromARGB(255, 238, 134, 134)],
+            colors: [
+              Color.fromARGB(255, 220, 26, 26),
+              Color.fromARGB(255, 238, 134, 134)
+            ],
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
@@ -129,6 +160,8 @@ class _LecturerHomePageState extends State<LecturerHomePage> {
             BottomNavigationBarItem(
                 icon: Icon(Icons.check_box), label: 'Records'),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.camera_alt), label: 'Face Recognition'),
           ],
         ),
       ),
@@ -138,10 +171,15 @@ class _LecturerHomePageState extends State<LecturerHomePage> {
 
 class HomeWidget extends StatelessWidget {
   final String lecturerName;
+  final String? profilePhotoUrl;
   final List<Map<String, dynamic>> lessons;
 
-  const HomeWidget(
-      {super.key, required this.lecturerName, required this.lessons});
+  const HomeWidget({
+    super.key,
+    required this.lecturerName,
+    required this.profilePhotoUrl,
+    required this.lessons,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -154,9 +192,13 @@ class HomeWidget extends StatelessWidget {
             padding: const EdgeInsets.all(16.0),
             child: Row(
               children: <Widget>[
-                const CircleAvatar(
-                  backgroundColor: Colors.orange,
-                  child: Icon(Icons.person, color: Colors.white),
+                CircleAvatar(
+                  backgroundImage: profilePhotoUrl != null
+                      ? NetworkImage(profilePhotoUrl!)
+                      : const AssetImage('assets/images/default_user.png')
+                          as ImageProvider,
+                  backgroundColor: Colors.grey,
+                  radius: 30,
                 ),
                 const SizedBox(width: 10),
                 Column(

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:helloapp/students/Student_Home_Page.dart'; // Ensure you have the correct import path
 import 'lecturer/Lecturer_Home_Page.dart'; // Ensure you have the correct import path
+
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
+
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
@@ -11,38 +13,60 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   Future<void> _login() async {
-    try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-
-      String userEmail =
-          _emailController.text.trim(); // Define userEmail using the controller
-
-      if (userEmail.endsWith('@gmail.com')) {
-        Navigator.pushNamed(context, '/adminhome');
-      } else if (userEmail.endsWith('@uowmail.edu.au')) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => StudentHomePage(email: userEmail),
-          ),
+    if (_formKey.currentState!.validate()) {
+      try {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
         );
-      } else if (userEmail.contains('lecturer')) {
-        Navigator.pushNamed(context, '/lecturerhomepage', arguments: {
-          'email': userEmail,
-        });
-      } else {
-        Navigator.pushNamed(context, '/studenthomepage', arguments: {
-          'email': userEmail,
-        });
+
+        String userEmail = _emailController.text.trim();
+
+        if (userEmail.endsWith('@gmail.com')) {
+          Navigator.pushNamed(context, '/adminhome');
+        } else if (userEmail.endsWith('@uowmail.edu.au')) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => StudentHomePage(email: userEmail),
+            ),
+          );
+        } else if (userEmail.contains('lecturer')) {
+          Navigator.pushNamed(context, '/lecturerhomepage', arguments: {
+            'email': userEmail,
+          });
+        } else {
+          Navigator.pushNamed(context, '/studenthomepage', arguments: {
+            'email': userEmail,
+          });
+        }
+      } on FirebaseAuthException catch (e) {
+        String message;
+        switch (e.code) {
+          case 'user-not-found':
+            message = 'No user found for that email.';
+            break;
+          case 'wrong-password':
+            message = 'Wrong password provided for that user.';
+            break;
+          case 'too-many-requests':
+            message =
+                'Too many login attempts. Please wait and try again later or contact your System Admin.';
+            break;
+          default:
+            message = 'An error occurred. Please try again.';
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to sign in: $e')),
+        );
       }
-    } catch (e) {
-      print("Failed to sign in: $e");
-      // Optionally, show a message to the user
     }
   }
 
@@ -63,13 +87,14 @@ class _LoginPageState extends State<LoginPage> {
         child: Padding(
           padding: const EdgeInsets.all(20.0),
           child: Form(
+            key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
                   height: 200,
-                  color: Colors.white, // Placeholder for photo widget
+                  color: Colors.white,
                   child: Center(
                     child: Image.asset(
                       'assets/loginimage.jpg',
