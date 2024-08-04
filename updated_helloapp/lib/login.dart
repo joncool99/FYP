@@ -25,6 +25,11 @@ class _LoginPageState extends State<LoginPage> {
 
         String userEmail = _emailController.text.trim();
 
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Successfully logged in to the account.')),
+        );
+
+
         if (userEmail.endsWith('@gmail.com')) {
           Navigator.pushNamed(context, '/adminhome');
         } else if (userEmail.endsWith('@uowmail.edu.au')) {

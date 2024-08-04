@@ -2,11 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:helloapp/admin/accounts.dart';
 import 'package:helloapp/timetable/timetable_home.dart';
 import 'package:helloapp/attendance/captureImages.dart';
-
-
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AdminhomePage extends StatelessWidget {
   const AdminhomePage({super.key});
+
+  Future<void> _logout(BuildContext context) async {
+    await FirebaseAuth.instance.signOut();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Successfully logged out')),
+    );
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,6 +27,12 @@ class AdminhomePage extends StatelessWidget {
             height: 4.0,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => _logout(context),
+          ),
+        ],
       ),
       body: Center(
         child: Row(
