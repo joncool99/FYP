@@ -251,7 +251,21 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
                     ElevatedButton(
                       onPressed: () {
                         _auth.signOut();
-                        Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => LoginPage()), (route) => false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Successfully logged out.'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+
+                        // Navigate to LoginPage after a short delay to ensure the snack bar is visible
+                        Future.delayed(Duration(seconds: 2), () {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(builder: (context) => LoginPage()),
+                                (route) => false,
+                          );
+                        });
                       },
                       child: Text('Sign Out', style: TextStyle(fontSize: 18)),
                       style: ElevatedButton.styleFrom(

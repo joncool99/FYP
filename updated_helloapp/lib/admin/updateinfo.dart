@@ -136,6 +136,7 @@ class _UpdatePageState extends State<UpdatePage> {
                   labelText: 'Email',
                   border: OutlineInputBorder(),
                 ),
+                enabled: false,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter your email';
@@ -153,6 +154,7 @@ class _UpdatePageState extends State<UpdatePage> {
                   labelText: 'Student ID',
                   border: OutlineInputBorder(),
                 ),
+                enabled: false,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter your student ID';
