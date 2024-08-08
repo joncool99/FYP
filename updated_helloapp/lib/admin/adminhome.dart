@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:helloapp/admin/accounts.dart';
+import 'package:helloapp/admin/admin_records.dart';
 import 'package:helloapp/timetable/timetable_home.dart';
 import 'package:helloapp/attendance/captureImages.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -27,12 +28,7 @@ class AdminhomePage extends StatelessWidget {
             height: 4.0,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => _logout(context),
-          ),
-        ],
+
       ),
       body: Center(
         child: Row(
@@ -104,7 +100,7 @@ class AdminhomePage extends StatelessWidget {
                     //go student page
                     Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => CaptureImagePage()),
+                MaterialPageRoute(builder: (context) => const AdminRecordPage()),
               );
                   },
               
