@@ -75,7 +75,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
         title: const Text('Create Course'),
         iconTheme: const IconThemeData(color: Colors.blue),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
@@ -123,29 +123,29 @@ class _TimetableScreenState extends State<TimetableScreen> {
                 onPressed: _addLesson,
                 child: const Text('Add Lesson'),
               ),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: lessons.length,
-                  itemBuilder: (context, index) {
-                    return LessonWidget(
-                      lesson: lessons[index],
-                      onDelete: () {
-                        setState(() {
-                          lessons.removeAt(index);
-                        });
-                      },
-                    );
-                  },
-                ),
+              ListView.builder(
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(),
+                itemCount: lessons.length,
+                itemBuilder: (context, index) {
+                  return LessonWidget(
+                    lesson: lessons[index],
+                    onDelete: () {
+                      setState(() {
+                        lessons.removeAt(index);
+                      });
+                    },
+                  );
+                },
               ),
               const SizedBox(height: 10),
               TextFormField(
                 controller: _emailController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Student Email',
                   suffixIcon: IconButton(
                     icon: Icon(Icons.add),
-                    onPressed: null, // to be set later
+                    onPressed: _addStudentEmail,
                   ),
                 ),
               ),
@@ -155,15 +155,15 @@ class _TimetableScreenState extends State<TimetableScreen> {
               ),
               const SizedBox(height: 20),
               Text('Added Students:'),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: studentEmails.length,
-                  itemBuilder: (context, index) {
-                    return ListTile(
-                      title: Text(studentEmails[index]),
-                    );
-                  },
-                ),
+              ListView.builder(
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(),
+                itemCount: studentEmails.length,
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    title: Text(studentEmails[index]),
+                  );
+                },
               ),
               ElevatedButton(
                 onPressed: _submitTimetable,
