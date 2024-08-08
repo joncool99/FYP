@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:camera/camera.dart';
-import 'package:helloapp/students/student_registerFace.dart';
 import 'Student_Timetable.dart';
 import 'Student_View_Attendance.dart';
 import 'Student_View_Profile.dart';
@@ -78,6 +76,13 @@ class _StudentHomepageState extends State<StudentHomePage> {
             .get();
 
         for (var lessonDoc in lessonsSnapshot.docs) {
+          QuerySnapshot attendanceSnapshot = await lessonDoc.reference
+              .collection('Attendance')
+              .where('email', isEqualTo: widget.email)
+              .get();
+
+          bool isPresent = attendanceSnapshot.docs.isNotEmpty;
+
           lessons.add({
             'courseName': courseDoc.get('courseName') ?? 'No Course Name',
             'courseId': courseDoc.get('courseId'),
@@ -85,6 +90,7 @@ class _StudentHomepageState extends State<StudentHomePage> {
             'startTime': lessonDoc.get('startTime') ?? 'No Start Time',
             'endTime': lessonDoc.get('endTime') ?? 'No End Time',
             'location': lessonDoc.get('location') ?? 'No Location',
+            'present': isPresent,
           });
         }
       }
@@ -118,6 +124,7 @@ class _StudentHomepageState extends State<StudentHomePage> {
   Widget build(BuildContext context) {
     final List<Widget> _widgetOptions = <Widget>[
       HomeWidget(
+          email: widget.email,
           studentName: studentName,
           profilePhotoUrl: profilePhotoUrl,
           lessons: todayLessons,
@@ -158,19 +165,72 @@ class _StudentHomepageState extends State<StudentHomePage> {
   }
 }
 
-class HomeWidget extends StatelessWidget {
+class HomeWidget extends StatefulWidget {
+  final String email;
   final String studentName;
   final String? profilePhotoUrl;
-  final List<Map<String, dynamic>> lessons;
+  List<Map<String, dynamic>> lessons;
   final CameraDescription? camera;
 
-  const HomeWidget({
+  HomeWidget({
     Key? key,
+    required this.email,
     required this.studentName,
     required this.profilePhotoUrl,
     required this.lessons,
     required this.camera,
   }) : super(key: key);
+
+  @override
+  State<HomeWidget> createState() => _HomeWidgetState();
+}
+
+class _HomeWidgetState extends State<HomeWidget> {
+  Future<void> _fetchTodayLessons() async {
+    try {
+      DateTime now = DateTime.now();
+      DateTime startOfDay = DateTime(now.year, now.month, now.day);
+      DateTime endOfDay = DateTime(now.year, now.month, now.day, 23, 59, 59);
+
+      QuerySnapshot coursesSnapshot = await FirebaseFirestore.instance
+          .collection('Courses')
+          .where('students', arrayContains: widget.email)
+          .get();
+
+      widget.lessons = [];
+
+      for (var courseDoc in coursesSnapshot.docs) {
+        QuerySnapshot lessonsSnapshot = await courseDoc.reference
+            .collection('Lessons')
+            .where('date', isGreaterThanOrEqualTo: startOfDay)
+            .where('date', isLessThanOrEqualTo: endOfDay)
+            .get();
+
+        for (var lessonDoc in lessonsSnapshot.docs) {
+          QuerySnapshot attendanceSnapshot = await lessonDoc.reference
+              .collection('Attendance')
+              .where('email', isEqualTo: widget.email)
+              .get();
+
+          bool isPresent = attendanceSnapshot.docs.isNotEmpty;
+
+          widget.lessons.add({
+            'courseName': courseDoc.get('courseName') ?? 'No Course Name',
+            'courseId': courseDoc.get('courseId'),
+            'lessonName': lessonDoc.get('lessonName') ?? 'No Lesson Name',
+            'startTime': lessonDoc.get('startTime') ?? 'No Start Time',
+            'endTime': lessonDoc.get('endTime') ?? 'No End Time',
+            'location': lessonDoc.get('location') ?? 'No Location',
+            'present': isPresent,
+          });
+        }
+      }
+      setState(() {
+      });
+    }catch (e) {
+      print('Error fetching today\'s lessons: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -184,10 +244,10 @@ class HomeWidget extends StatelessWidget {
             child: Row(
               children: <Widget>[
                 CircleAvatar(
-                  backgroundImage: profilePhotoUrl != null
-                      ? NetworkImage(profilePhotoUrl!)
+                  backgroundImage: widget.profilePhotoUrl != null
+                      ? NetworkImage(widget.profilePhotoUrl!)
                       : const AssetImage('assets/images/default_user.png')
-                          as ImageProvider,
+                  as ImageProvider,
                   backgroundColor: Colors.grey,
                   radius: 30,
                 ),
@@ -196,7 +256,7 @@ class HomeWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      'Hi, $studentName',
+                      'Hi, ${widget.studentName}',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -223,10 +283,10 @@ class HomeWidget extends StatelessWidget {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
           ),
-          ...lessons.map((lesson) {
+          ...widget.lessons.map((lesson) {
             return Container(
               margin:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
                 gradient: const LinearGradient(
@@ -261,27 +321,35 @@ class HomeWidget extends StatelessWidget {
                     ),
                     Row(
                       children: [
-                        Icon(Icons.place, size: 20, color: Colors.grey),
-                        SizedBox(width: 5),
+                        const Icon(Icons.place, size: 20, color: Colors.grey),
+                        const SizedBox(width: 5),
                         Text(lesson['location']),
+                        const Expanded(child: SizedBox()),
+                        Text(lesson['present']?'Present':'',
+                            style: const TextStyle(
+                              color: Colors.indigo,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            )),
                       ],
                     ),
                   ],
                 ),
-                onTap: camera != null
+                onTap: widget.camera != null
                     ? () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => StudentTakeAttendancePage(
-                              camera: camera!,
-                              courseId: lesson['courseId'],
-                              courseName: lesson['courseName'],
-                              lessonName: lesson['lessonName'],
-                            ),
-                          ),
-                        );
-                      }
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => StudentTakeAttendancePage(
+                        camera: widget.camera!,
+                        courseId: lesson['courseId'],
+                        courseName: lesson['courseName'],
+                        lessonName: lesson['lessonName'],
+                      ),
+                    ),
+                  );
+                  _fetchTodayLessons();
+                }
                     : null,
               ),
             );
