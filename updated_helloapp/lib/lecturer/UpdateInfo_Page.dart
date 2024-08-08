@@ -4,17 +4,17 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 
-class UpdatePage extends StatefulWidget {
-  final Map<String, dynamic> user;
+class UpdateInfoPage extends StatefulWidget {
+  final Map<String, dynamic>? userData;
 
-  UpdatePage({required this.user});
+  UpdateInfoPage({required this.userData});
 
   @override
-  _UpdatePageState createState() => _UpdatePageState();
+  _UpdateInfoPageState createState() => _UpdateInfoPageState();
 }
 
-class _UpdatePageState extends State<UpdatePage> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+class _UpdateInfoPageState extends State<UpdateInfoPage> {
+  final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _studentIdController = TextEditingController();
   final TextEditingController _firstNameController = TextEditingController();
@@ -23,21 +23,21 @@ class _UpdatePageState extends State<UpdatePage> {
   File? _image; //store the image file
   String? _imageUrl; //store the image URL
 
-   @override
+  @override
   void initState() {
     super.initState();
-    _emailController.text = widget.user['email'];
-    _studentIdController.text = widget.user['studentId'];
-    _firstNameController.text = widget.user['firstName'];
-    _lastNameController.text = widget.user['lastName'];
-    _majorController.text = widget.user['major'];
-    _imageUrl = widget.user['imageUrl'];
+    _emailController.text = widget.userData?['email'];
+    _studentIdController.text = widget.userData?['studentId'];
+    _firstNameController.text = widget.userData?['firstName'];
+    _lastNameController.text = widget.userData?['lastName'];
+    _majorController.text = widget.userData?['major'];
+    _imageUrl = widget.userData?['imageUrl'];
   }
-  
+
   Future<void> _pickImage() async {
     try {
       final pickedFile =
-          await ImagePicker().pickImage(source: ImageSource.gallery);
+      await ImagePicker().pickImage(source: ImageSource.gallery);
       setState(() {
         if (pickedFile != null) {
           _image = File(pickedFile.path);
@@ -124,8 +124,8 @@ class _UpdatePageState extends State<UpdatePage> {
                       shape: BoxShape.circle, color: Colors.blue),
                   child: _image == null
                       ? const Center(
-                          child: Text('Insert your face photo here',
-                              style: TextStyle(color: Colors.white)))
+                      child: Text('Insert your face photo here',
+                          style: TextStyle(color: Colors.white)))
                       : Image.file(_image!, fit: BoxFit.cover),
                 ),
               ),
@@ -151,13 +151,13 @@ class _UpdatePageState extends State<UpdatePage> {
               TextFormField(
                 controller: _studentIdController,
                 decoration: const InputDecoration(
-                  labelText: 'Student ID',
+                  labelText: 'Lecturer ID',
                   border: OutlineInputBorder(),
                 ),
                 enabled: false,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter your student ID';
+                    return 'Please enter your lecturer ID';
                   }
                   return null;
                 },
