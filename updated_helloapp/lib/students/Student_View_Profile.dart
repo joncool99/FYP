@@ -6,7 +6,7 @@ import 'package:helloapp/login.dart';
 import 'package:helloapp/students/Student_update_password.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'student_registerFace.dart';
-
+import 'Student_UpdateInfo.dart';
 
 class ViewProfilePage extends StatefulWidget {
   @override
@@ -81,6 +81,15 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
     } catch (e) {
       print('Error initializing camera: $e');
     }
+  }
+
+  Future<void> _navigateToUpdateInfoPage() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => UpdateInfoPage(userData: _userData)),
+    );
+    // Refresh user data after returning from the update info page
+    _fetchUserData();
   }
 
   @override
@@ -216,11 +225,23 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
                       child:
                           const Text('Register Face', style: TextStyle(fontSize: 18)),
                     ),
-
-
-
                     const SizedBox(height: 20),
-
+                    ElevatedButton(
+                      onPressed: _navigateToUpdateInfoPage,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromRGBO(22, 22, 151, 100),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
+                        minimumSize: Size(160, 50),
+                      ),
+                      child:
+                      const Text('Update Info', style: TextStyle(fontSize: 18)),
+                    ),
+                    const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: () {
                         Navigator.push(
@@ -244,7 +265,6 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
                       child:
                          const Text('Change Password', style: TextStyle(fontSize: 18)),
                     ),
-
 
                     // sign out button
                     const SizedBox(height: 20),
