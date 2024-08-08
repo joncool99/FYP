@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:helloapp/login.dart';
+import 'UpdateInfo_Page.dart';
 
 class LecturerProfilePage extends StatefulWidget {
   @override
@@ -47,6 +48,15 @@ class _LecturerProfilePageState extends State<LecturerProfilePage> {
             .toList();
       });
     }
+  }
+
+  Future<void> _navigateToUpdateInfoPage() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => UpdateInfoPage(userData: _userData)),
+    );
+    // Refresh user data after returning from the update info page
+    _fetchUserData();
   }
 
   @override
@@ -111,6 +121,11 @@ class _LecturerProfilePageState extends State<LecturerProfilePage> {
                       'Lecturer ID: ${_userData!['studentId']}',
                       style: const TextStyle(fontSize: 18),
                     ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Major: ${_userData!['major']}',
+                      style: const TextStyle(fontSize: 18),
+                    ),
                     const SizedBox(height: 20),
                     Divider(color: Colors.blue[900]),
                     const SizedBox(height: 20),
@@ -153,13 +168,37 @@ class _LecturerProfilePageState extends State<LecturerProfilePage> {
                           ),
                     const SizedBox(height: 20),
                     ElevatedButton(
-                      onPressed: () {
-                        _auth.signOut();
-                        Navigator.pushAndRemoveUntil(
+                      onPressed: _navigateToUpdateInfoPage,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        minimumSize: const Size(160, 50),
+                      ),
+                      child: const Text('Update Info', style: TextStyle(fontSize: 18)),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: () async{
+                        await _auth.signOut();
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Successfully logged out.'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                        // Navigate to LoginPage after a short delay to ensure the snack bar is visible
+                        Future.delayed(Duration(seconds: 2), () {
+                          Navigator.pushAndRemoveUntil(
                             context,
-                            MaterialPageRoute(
-                                builder: (context) => const LoginPage()),
-                            (route) => false);
+                            MaterialPageRoute(builder: (context) => const LoginPage()),
+                                (route) => false,
+                          );
+                        });
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
