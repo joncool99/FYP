@@ -75,56 +75,59 @@ class _TimetableScreenState extends State<TimetableScreen> {
         title: const Text('Create Course'),
         iconTheme: const IconThemeData(color: Colors.blue),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextFormField(
-                decoration: const InputDecoration(labelText: 'Course Name'),
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Please enter course name';
-                  }
-                  return null;
-                },
-                onSaved: (value) {
-                  courseName = value!;
-                },
-              ),
-              TextFormField(
-                decoration: const InputDecoration(labelText: 'Course ID'),
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Please enter course ID';
-                  }
-                  return null;
-                },
-                onSaved: (value) {
-                  courseId = value!;
-                },
-              ),
-              TextFormField(
-                decoration: const InputDecoration(labelText: 'Lecturer Email'),
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Please enter lecturer email';
-                  }
-                  return null;
-                },
-                onSaved: (value) {
-                  lecturerEmail = value!;
-                },
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _addLesson,
-                child: const Text('Add Lesson'),
-              ),
-              Expanded(
-                child: ListView.builder(
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextFormField(
+                  decoration: const InputDecoration(labelText: 'Course Name'),
+                  validator: (value) {
+                    if (value!.isEmpty) {
+                      return 'Please enter course name';
+                    }
+                    return null;
+                  },
+                  onSaved: (value) {
+                    courseName = value!;
+                  },
+                ),
+                TextFormField(
+                  decoration: const InputDecoration(labelText: 'Course ID'),
+                  validator: (value) {
+                    if (value!.isEmpty) {
+                      return 'Please enter course ID';
+                    }
+                    return null;
+                  },
+                  onSaved: (value) {
+                    courseId = value!;
+                  },
+                ),
+                TextFormField(
+                  decoration:
+                      const InputDecoration(labelText: 'Lecturer Email'),
+                  validator: (value) {
+                    if (value!.isEmpty) {
+                      return 'Please enter lecturer email';
+                    }
+                    return null;
+                  },
+                  onSaved: (value) {
+                    lecturerEmail = value!;
+                  },
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _addLesson,
+                  child: const Text('Add Lesson'),
+                ),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
                   itemCount: lessons.length,
                   itemBuilder: (context, index) {
                     return LessonWidget(
@@ -137,26 +140,26 @@ class _TimetableScreenState extends State<TimetableScreen> {
                     );
                   },
                 ),
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Student Email',
-                  suffixIcon: IconButton(
-                    icon: Icon(Icons.add),
-                    onPressed: null, // to be set later
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _emailController,
+                  decoration: InputDecoration(
+                    labelText: 'Student Email',
+                    suffixIcon: IconButton(
+                      icon: Icon(Icons.add),
+                      onPressed: _addStudentEmail,
+                    ),
                   ),
                 ),
-              ),
-              ElevatedButton(
-                onPressed: _addStudentEmail,
-                child: const Text('Add Student'),
-              ),
-              const SizedBox(height: 20),
-              Text('Added Students:'),
-              Expanded(
-                child: ListView.builder(
+                ElevatedButton(
+                  onPressed: _addStudentEmail,
+                  child: const Text('Add Student'),
+                ),
+                const SizedBox(height: 20),
+                Text('Added Students:'),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
                   itemCount: studentEmails.length,
                   itemBuilder: (context, index) {
                     return ListTile(
@@ -164,12 +167,12 @@ class _TimetableScreenState extends State<TimetableScreen> {
                     );
                   },
                 ),
-              ),
-              ElevatedButton(
-                onPressed: _submitTimetable,
-                child: const Text('Submit Course'),
-              ),
-            ],
+                ElevatedButton(
+                  onPressed: _submitTimetable,
+                  child: const Text('Submit Course'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
