@@ -169,6 +169,8 @@ class _LiveFaceRecognitionPageState extends State<LiveFaceRecognitionPage> {
     final usersSnapshot =
         await FirebaseFirestore.instance.collection('Users').get();
     int matchedFacesCount = 0;
+    double maxSimilarity = 0.0;
+    String bestMatch = '';
 
     for (var userDoc in usersSnapshot.docs) {
       final userData = userDoc.data();
@@ -185,15 +187,24 @@ class _LiveFaceRecognitionPageState extends State<LiveFaceRecognitionPage> {
 
       final similarity =
           _calculateCosineSimilarity(convertedEmbeddings, newEmbeddings);
-      if (similarity > 0.7) {
-        // Adjust threshold for higher accuracy
-        final firstName = userData['firstName'] ?? 'Unknown';
-        final lastName = userData['lastName'] ?? 'Unknown';
-        final studentId = userData['studentId'] ?? 'Unknown';
-        _identifiedStudents.add('$firstName $lastName (ID: $studentId)');
-        matchedFacesCount++;
+
+      if (similarity > maxSimilarity) {
+        maxSimilarity = similarity;
+        bestMatch = userDoc.id;
       }
     }
+
+    if (maxSimilarity > 0.8) {
+      // Adjusted threshold
+      final matchedUserData =
+          usersSnapshot.docs.firstWhere((doc) => doc.id == bestMatch).data();
+      final firstName = matchedUserData['firstName'] ?? 'Unknown';
+      final lastName = matchedUserData['lastName'] ?? 'Unknown';
+      final studentId = matchedUserData['studentId'] ?? 'Unknown';
+      _identifiedStudents.add('$firstName $lastName (ID: $studentId)');
+      matchedFacesCount++;
+    }
+
     setState(() {});
     return matchedFacesCount;
   }
@@ -213,13 +224,16 @@ class _LiveFaceRecognitionPageState extends State<LiveFaceRecognitionPage> {
     magnitudeA = sqrt(magnitudeA);
     magnitudeB = sqrt(magnitudeB);
 
+    double similarity = 0.0;
     if (magnitudeA != 0.0 && magnitudeB != 0.0) {
-      return dotProduct / (magnitudeA * magnitudeB);
-    } else {
-      return 0.0;
+      similarity = dotProduct / (magnitudeA * magnitudeB);
     }
-  }
 
+    // Debugging output
+    print('Cosine Similarity: $similarity');
+
+    return similarity;
+  }
   List<double> _calculateAverageEmbeddings(List<List<double>> embeddingsList) {
     final int length = embeddingsList.first.length;
     final List<double> averageEmbeddings = List.filled(length, 0.0);

@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_ml_vision/google_ml_vision.dart';
@@ -28,6 +29,7 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
   bool _isModelLoaded = false;
   bool _isCameraInitialized = false;
   List<List<double>> embeddingsList = [];
+  List<Map<String, dynamic>> landmarksList = [];
 
   @override
   void initState() {
@@ -65,7 +67,7 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
       setState(() {
         _isModelLoaded = true;
       });
-      print('Model loaded');
+      print('Model loaded successfully');
     } catch (e) {
       print('Error loading model: $e');
       setState(() {
@@ -88,14 +90,11 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
 
     try {
       for (int i = 0; i < 5; i++) {
-        // Capture 5 images for better accuracy
-        // Capture the image
         print('Capturing image...');
         final XFile imageFile = await _controller.takePicture();
         print('Picture taken: ${imageFile.path}');
         final Uint8List imageBytes = await imageFile.readAsBytes();
 
-        // Detect faces using Google ML Vision
         print('Detecting faces...');
         final GoogleVisionImage visionImage =
             GoogleVisionImage.fromFilePath(imageFile.path);
@@ -112,35 +111,51 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
           return;
         }
 
-        // Extract the first detected face and get embeddings
-        print('Extracting face and getting embeddings...');
+        print('Extracting and aligning face...');
         final Face face = faces[0];
         final img.Image originalImage = img.decodeImage(imageBytes)!;
-        final img.Image faceImage = img.copyCrop(
-          originalImage,
-          face.boundingBox.left.toInt(),
-          face.boundingBox.top.toInt(),
-          face.boundingBox.width.toInt(),
-          face.boundingBox.height.toInt(),
-        );
-        final embeddings = await _getEmbeddings(faceImage);
+
+        // Apply histogram equalization to improve image quality
+        final img.Image equalizedImage =
+            _applyHistogramEqualization(originalImage);
+
+        final img.Image alignedFaceImage = _alignFace(equalizedImage, face);
+
+        final embeddings = await _getEmbeddings(alignedFaceImage);
         embeddingsList.add(embeddings);
 
-        // Save face image to assets locally
+        // Capture landmarks
+        final landmarks = {
+          'leftEye': {
+            'x': face.getLandmark(FaceLandmarkType.leftEye)!.position.dx,
+            'y': face.getLandmark(FaceLandmarkType.leftEye)!.position.dy
+          },
+          'rightEye': {
+            'x': face.getLandmark(FaceLandmarkType.rightEye)!.position.dx,
+            'y': face.getLandmark(FaceLandmarkType.rightEye)!.position.dy
+          },
+          'noseBase': {
+            'x': face.getLandmark(FaceLandmarkType.noseBase)!.position.dx,
+            'y': face.getLandmark(FaceLandmarkType.noseBase)!.position.dy
+          },
+        };
+        landmarksList.add(landmarks);
+
         print('Saving face image...');
         final Directory appDocDir = await getApplicationDocumentsDirectory();
         final String faceImagePath = path.join(appDocDir.path,
             'face_${DateTime.now().millisecondsSinceEpoch}.png');
         final File faceImageFile = File(faceImagePath);
-        faceImageFile.writeAsBytesSync(img.encodePng(faceImage));
+        faceImageFile.writeAsBytesSync(img.encodePng(alignedFaceImage));
 
-        await Future.delayed(Duration(seconds: 1)); // Delay between captures
+        await Future.delayed(Duration(seconds: 1));
       }
 
-      // Calculate average embeddings
-      final averageEmbeddings = _calculateAverageEmbeddings(embeddingsList);
-      // Save embeddings to Firestore
-      await _saveEmbeddingsToFirestore(averageEmbeddings);
+      final averageEmbeddings =
+          _normalizeEmbeddings(_calculateAverageEmbeddings(embeddingsList));
+
+      await _saveEmbeddingsAndLandmarksToFirestore(
+          averageEmbeddings, landmarksList);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Face registered successfully!')),
@@ -155,20 +170,87 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
     }
   }
 
-  Future<void> _saveEmbeddingsToFirestore(List<double> embeddings) async {
+  img.Image _applyHistogramEqualization(img.Image image) {
+    // Create histogram
+    List<int> histogram = List.filled(256, 0);
+    for (int y = 0; y < image.height; y++) {
+      for (int x = 0; x < image.width; x++) {
+        int brightness = img.getRed(image.getPixel(x, y));
+        histogram[brightness]++;
+      }
+    }
+
+    // Create cumulative distribution function (CDF)
+    List<int> cdf = List.filled(256, 0);
+    cdf[0] = histogram[0];
+    for (int i = 1; i < 256; i++) {
+      cdf[i] = cdf[i - 1] + histogram[i];
+    }
+
+    // Normalize CDF
+    int minCDF = cdf.firstWhere((value) => value != 0);
+    for (int i = 0; i < 256; i++) {
+      cdf[i] = ((cdf[i] - minCDF) / (image.width * image.height - minCDF) * 255)
+          .round();
+    }
+
+    // Apply equalization
+    img.Image equalizedImage = img.Image.from(image);
+    for (int y = 0; y < equalizedImage.height; y++) {
+      for (int x = 0; x < equalizedImage.width; x++) {
+        int pixel = equalizedImage.getPixel(x, y);
+        int r = cdf[img.getRed(pixel)];
+        int g = cdf[img.getGreen(pixel)];
+        int b = cdf[img.getBlue(pixel)];
+        equalizedImage.setPixel(x, y, img.getColor(r, g, b));
+      }
+    }
+
+    return equalizedImage;
+  }
+
+  img.Image _alignFace(img.Image image, Face face) {
+    final leftEye = face.getLandmark(FaceLandmarkType.leftEye)!.position;
+    final rightEye = face.getLandmark(FaceLandmarkType.rightEye)!.position;
+    final dx = rightEye.dx - leftEye.dx;
+    final dy = rightEye.dy - leftEye.dy;
+    final angle = atan2(dy, dx);
+
+    if (angle.isNaN || angle.isInfinite) {
+      print('Invalid angle: $angle');
+      return image;
+    }
+
+    img.Image alignedImage = img.copyRotate(image, -angle * 180 / pi);
+
+    final alignedFace = img.copyCrop(
+      alignedImage,
+      face.boundingBox.left.toInt(),
+      face.boundingBox.top.toInt(),
+      face.boundingBox.width.toInt(),
+      face.boundingBox.height.toInt(),
+    );
+
+    return alignedFace;
+  }
+
+  Future<void> _saveEmbeddingsAndLandmarksToFirestore(
+      List<double> embeddings, List<Map<String, dynamic>> landmarksList) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         await FirebaseFirestore.instance
             .collection('Users')
             .doc(user.email)
-            .update({
+            .set({
           'embeddings': embeddings,
-        });
-        print('Face embeddings saved to Firestore!');
+          'landmarks':
+              landmarksList.last, // Store only the last set of landmarks
+        }, SetOptions(merge: true));
+        print('Face embeddings and landmarks saved to Firestore!');
       }
     } catch (e) {
-      print('Failed to save face embeddings: $e');
+      print('Failed to save face embeddings and landmarks: $e');
     }
   }
 
@@ -189,20 +271,22 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
     return averageEmbeddings;
   }
 
+  List<double> _normalizeEmbeddings(List<double> embeddings) {
+    double magnitude = sqrt(embeddings.fold(0.0, (sum, e) => sum + e * e));
+    return embeddings.map((e) => e / magnitude).toList();
+  }
+
   Future<List<double>> _getEmbeddings(img.Image faceImage) async {
     print('Getting embeddings...');
-    // Resize and normalize the face image
     final img.Image resizedImage =
         img.copyResize(faceImage, width: 112, height: 112);
     final List input = _imageToByteListFloat32(resizedImage, 112, 128, 128);
 
-    // Define input and output tensors
     final output = List.filled(1 * 192, 0).reshape([1, 192]);
 
-    // Run inference
     _interpreter.run(input, output);
 
-    return output[0];
+    return List<double>.from(output[0]);
   }
 
   List _imageToByteListFloat32(
@@ -211,15 +295,15 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
         Float32List(1 * inputSize * inputSize * 3);
     final buffer = Float32List.view(convertedBytes.buffer);
     int pixelIndex = 0;
+
     for (int i = 0; i < inputSize; i++) {
       for (int j = 0; j < inputSize; j++) {
-        final int pixel = image.getPixel(j, i);
-        final int r = img.getRed(pixel); // Extract red value
-        final int g = img.getGreen(pixel); // Extract green value
-        final int b = img.getBlue(pixel); // Extract blue value
-        buffer[pixelIndex++] = (r - mean) / std;
-        buffer[pixelIndex++] = (g - mean) / std;
-        buffer[pixelIndex++] = (b - mean) / std;
+        if (pixelIndex < buffer.length) {
+          final int pixel = image.getPixelSafe(j, i);
+          buffer[pixelIndex++] = (img.getRed(pixel) - mean) / std;
+          buffer[pixelIndex++] = (img.getGreen(pixel) - mean) / std;
+          buffer[pixelIndex++] = (img.getBlue(pixel) - mean) / std;
+        }
       }
     }
     return convertedBytes.buffer.asUint8List();
