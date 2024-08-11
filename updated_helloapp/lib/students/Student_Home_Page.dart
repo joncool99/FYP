@@ -19,7 +19,6 @@ class _StudentHomepageState extends State<StudentHomePage> {
   int _selectedIndex = 0;
   String studentName = '';
   String? profilePhotoUrl;
-  List<Map<String, dynamic>> todayLessons = [];
   CameraDescription? firstCamera;
 
   @override
@@ -46,60 +45,11 @@ class _StudentHomepageState extends State<StudentHomePage> {
           studentName = snapshot.get('firstName') ?? 'Student';
           profilePhotoUrl = snapshot.get('imageUrl');
         });
-        _fetchTodayLessons();
       } else {
         print('No document found for the email: ${widget.email}');
       }
     } catch (e) {
       print('Error fetching student name: $e');
-    }
-  }
-
-  Future<void> _fetchTodayLessons() async {
-    try {
-      DateTime now = DateTime.now();
-      DateTime startOfDay = DateTime(now.year, now.month, now.day);
-      DateTime endOfDay = DateTime(now.year, now.month, now.day, 23, 59, 59);
-
-      QuerySnapshot coursesSnapshot = await FirebaseFirestore.instance
-          .collection('Courses')
-          .where('students', arrayContains: widget.email)
-          .get();
-
-      List<Map<String, dynamic>> lessons = [];
-
-      for (var courseDoc in coursesSnapshot.docs) {
-        QuerySnapshot lessonsSnapshot = await courseDoc.reference
-            .collection('Lessons')
-            .where('date', isGreaterThanOrEqualTo: startOfDay)
-            .where('date', isLessThanOrEqualTo: endOfDay)
-            .get();
-
-        for (var lessonDoc in lessonsSnapshot.docs) {
-          QuerySnapshot attendanceSnapshot = await lessonDoc.reference
-              .collection('Attendance')
-              .where('email', isEqualTo: widget.email)
-              .get();
-
-          bool isPresent = attendanceSnapshot.docs.isNotEmpty;
-
-          lessons.add({
-            'courseName': courseDoc.get('courseName') ?? 'No Course Name',
-            'courseId': courseDoc.get('courseId'),
-            'lessonName': lessonDoc.get('lessonName') ?? 'No Lesson Name',
-            'startTime': lessonDoc.get('startTime') ?? 'No Start Time',
-            'endTime': lessonDoc.get('endTime') ?? 'No End Time',
-            'location': lessonDoc.get('location') ?? 'No Location',
-            'present': isPresent,
-          });
-        }
-      }
-
-      setState(() {
-        todayLessons = lessons;
-      });
-    } catch (e) {
-      print('Error fetching today\'s lessons: $e');
     }
   }
 
@@ -127,8 +77,8 @@ class _StudentHomepageState extends State<StudentHomePage> {
           email: widget.email,
           studentName: studentName,
           profilePhotoUrl: profilePhotoUrl,
-          lessons: todayLessons,
-          camera: firstCamera),
+          lessons: [],
+          camera: firstCamera,),
       ViewTimetable(),
       const RecordPage(),
       ViewProfilePage(),
@@ -173,13 +123,13 @@ class HomeWidget extends StatefulWidget {
   final CameraDescription? camera;
 
   HomeWidget({
-    Key? key,
+    super.key,
     required this.email,
     required this.studentName,
     required this.profilePhotoUrl,
     required this.lessons,
     required this.camera,
-  }) : super(key: key);
+  });
 
   @override
   State<HomeWidget> createState() => _HomeWidgetState();
@@ -230,6 +180,12 @@ class _HomeWidgetState extends State<HomeWidget> {
     }catch (e) {
       print('Error fetching today\'s lessons: $e');
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTodayLessons();
   }
 
   @override
@@ -314,8 +270,8 @@ class _HomeWidgetState extends State<HomeWidget> {
                     Text(lesson['courseName']),
                     Row(
                       children: [
-                        Icon(Icons.access_time, size: 20, color: Colors.grey),
-                        SizedBox(width: 5),
+                        const Icon(Icons.access_time, size: 20, color: Colors.grey),
+                        const SizedBox(width: 5),
                         Text('${lesson['startTime']} - ${lesson['endTime']}'),
                       ],
                     ),
@@ -347,13 +303,14 @@ class _HomeWidgetState extends State<HomeWidget> {
                         lessonName: lesson['lessonName'],
                       ),
                     ),
-                  );
-                  _fetchTodayLessons();
+                  ).then((_) => setState(() {
+                    _fetchTodayLessons();
+                  }));
                 }
                     : null,
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );
