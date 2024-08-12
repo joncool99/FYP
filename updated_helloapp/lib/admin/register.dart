@@ -23,6 +23,8 @@ class _RegisterPageState extends State<RegisterPage> {
   File? _image;
   String? _imageUrl;
   List<dynamic>? _faceLandmarks;
+  bool? _ifHasSameEmail;
+  bool? _ifHasSameId;
 
   @override
   void dispose() {
@@ -185,6 +187,24 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
+  Future<bool> _hasSameEmail(String email) async {
+    QuerySnapshot emailSnapshot = await FirebaseFirestore.instance
+        .collection('Users')
+        .where('email', isEqualTo: email)
+        .get();
+
+    return emailSnapshot.docs.isNotEmpty;
+  }
+
+  Future<bool> _hasSameId(String ID) async {
+    QuerySnapshot usersSnapshot = await FirebaseFirestore.instance
+        .collection('Users')
+        .where('studentId', isEqualTo: ID)
+        .get();
+
+    return usersSnapshot.docs.isNotEmpty;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -218,12 +238,22 @@ class _RegisterPageState extends State<RegisterPage> {
                   labelText: 'Email',
                   border: OutlineInputBorder(),
                 ),
+                onChanged: (value) async {
+                  bool isSame = await _hasSameEmail(value);
+                  setState(() {
+                    _ifHasSameEmail = isSame;
+                  });
+
+                },
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter your email';
                   }
                   if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
                     return 'Please enter a valid email address';
+                  }
+                  if (_ifHasSameEmail!){
+                    return 'Same email exists, please use another email.';
                   }
                   return null;
                 },
@@ -235,10 +265,20 @@ class _RegisterPageState extends State<RegisterPage> {
                   labelText: 'Student ID/Lecturer ID',
                   border: OutlineInputBorder(),
                 ),
+                onChanged: (value) async {
+                  bool isSame = await _hasSameId(value);
+                  setState(() {
+                    _ifHasSameId = isSame;
+                  });
+                },
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter ID';
                   }
+                  if (_ifHasSameId!){
+                    return 'Same ID exists, please use another ID';
+                  }
+                  
                   return null;
                 },
               ),
@@ -295,6 +335,12 @@ class _RegisterPageState extends State<RegisterPage> {
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter a password';
+                  }
+                  if (value.length < 5){
+                    return 'The password length must be longer than 4';
+                  }
+                  if (!RegExp(r'^[a-zA-Z0-9]+$').hasMatch(value)){
+                    return 'Password should not contain special characters';
                   }
                   return null;
                 },
