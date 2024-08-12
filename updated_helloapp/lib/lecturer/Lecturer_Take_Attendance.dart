@@ -7,7 +7,7 @@ import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:image/image.dart' as img;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path/path.dart' as p;
+import 'package:path/path.dart' as p; // Import the path package
 
 class LecturerTakeAttendancePage extends StatefulWidget {
   final String courseId;
@@ -35,56 +35,46 @@ class LecturerTakeAttendancePage extends StatefulWidget {
 class _LecturerTakeAttendancePageState
     extends State<LecturerTakeAttendancePage> {
   late Interpreter _interpreter;
-  late Interpreter _antiSpoofingInterpreter;
   bool _isModelLoaded = false;
-  bool _isAntiSpoofingModelLoaded = false;
   bool _isProcessing = false;
   File? _imageFile;
   final ImagePicker _picker = ImagePicker();
   List<String> _identifiedStudents = [];
-  int _consecutiveClosedFrames = 0;
-  static const int _blinkThreshold = 2;
+  Set<String> _matchedUserIds = {}; // To track already identified user IDs
 
   @override
   void initState() {
     super.initState();
-    _loadModels();
+    _loadModel();
   }
 
-  Future<void> _loadModels() async {
-    print('Loading models...');
+  Future<void> _loadModel() async {
+    print('Loading model...');
     try {
       _interpreter = await Interpreter.fromAsset('assets/mobilefacenet.tflite');
-      _isModelLoaded = true;
+      setState(() {
+        _isModelLoaded = true;
+      });
+      print('Model loaded successfully');
     } catch (e) {
-      print('Error loading face recognition model: $e');
-      _isModelLoaded = false;
+      print('Error loading model: $e');
+      setState(() {
+        _isModelLoaded = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading face recognition model: $e')),
+        SnackBar(content: Text('Error loading model: $e')),
       );
     }
-
-    try {
-      _antiSpoofingInterpreter =
-          await Interpreter.fromAsset('assets/FaceAntiSpoofing.tflite');
-      _isAntiSpoofingModelLoaded = true;
-    } catch (e) {
-      print('Error loading anti-spoofing model: $e');
-      _isAntiSpoofingModelLoaded = false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading anti-spoofing model: $e')),
-      );
-    }
-
-    setState(() {}); // Update the UI after loading the models
   }
 
   Future<void> _pickImage() async {
     try {
       final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
       if (pickedFile != null) {
+        // Check if the file is a JPEG or JPG
         final extension = p.extension(pickedFile.path).toLowerCase();
         if (extension != '.jpeg' && extension != '.jpg') {
+          // Show an error message if the file is not a JPEG or JPG
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Please select a JPEG or JPG image.')),
           );
@@ -93,7 +83,8 @@ class _LecturerTakeAttendancePageState
 
         setState(() {
           _imageFile = File(pickedFile.path);
-          _identifiedStudents.clear();
+          _identifiedStudents.clear(); // Clear the identified students list
+          _matchedUserIds.clear(); // Clear the matched user IDs set
         });
       }
     } catch (e) {
@@ -102,12 +93,9 @@ class _LecturerTakeAttendancePageState
   }
 
   Future<void> _processImage() async {
-    if (_imageFile == null ||
-        !_isModelLoaded ||
-        !_isAntiSpoofingModelLoaded ||
-        _isProcessing) {
+    if (_imageFile == null || !_isModelLoaded || _isProcessing) {
       print(
-          'Button disabled. _isProcessing: $_isProcessing, _isModelLoaded: $_isModelLoaded, _isAntiSpoofingModelLoaded: $_isAntiSpoofingModelLoaded, _imageFile: $_imageFile');
+          'Button disabled. _isProcessing: $_isProcessing, _isModelLoaded: $_isModelLoaded, _imageFile: $_imageFile');
       return;
     }
 
@@ -131,37 +119,32 @@ class _LecturerTakeAttendancePageState
       }
 
       final img.Image originalImage = img.decodeImage(imageBytes)!;
-      List<List<double>> embeddingsList = [];
+      List<Map<String, dynamic>> matchedFaces = [];
 
       for (Face face in faces) {
-        final img.Image alignedFaceImage = _alignFace(originalImage, face);
+        // Apply histogram equalization before alignment
+        final img.Image equalizedImage =
+            _applyHistogramEqualization(originalImage);
 
-        // Check for spoofing
-        final bool isSpoof = await _checkForSpoof(alignedFaceImage);
-        if (isSpoof) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Spoof detected! Please try again.')),
-          );
-          setState(() => _isProcessing = false);
-          return;
-        }
-
-        if (!_isEyeBlinking(face)) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Spoof detected: No eye blink detected!')),
-          );
-          setState(() => _isProcessing = false);
-          return;
-        }
-
+        final img.Image alignedFaceImage = _alignFace(equalizedImage, face);
         final embeddings = await _getEmbeddings(alignedFaceImage);
-        embeddingsList.add(embeddings);
+        final matchedFace = await _findBestMatch(embeddings);
+        if (matchedFace != null) {
+          matchedFaces.add(matchedFace);
+        }
       }
 
-      final matchedFacesCount =
-          await _identifyAndMarkAttendance(embeddingsList);
+      if (matchedFaces.isNotEmpty) {
+        for (var match in matchedFaces) {
+          // Only mark attendance if the user has not already been matched
+          if (!_matchedUserIds.contains(match['email'])) {
+            await _markAttendance(match['email']);
+            _identifiedStudents.add(
+                '${match['firstName']} ${match['lastName']} (ID: ${match['studentId']})');
+            _matchedUserIds.add(match['email']); // Add to matched user IDs set
+          }
+        }
 
-      if (matchedFacesCount > 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Attendance marked successfully!')),
         );
@@ -180,35 +163,43 @@ class _LecturerTakeAttendancePageState
     }
   }
 
-  Future<bool> _checkForSpoof(img.Image faceImage) async {
-    final img.Image resizedImage = img.copyResize(faceImage,
-        width: 224, height: 224); // Resizing for model input
-    final List input = _imageToByteListFloat32(resizedImage, 224, 128, 128);
-
-    final output = List.filled(1 * 1, 0).reshape([
-      1,
-      1
-    ]); // Assuming the model returns a single value for spoof detection
-
-    _antiSpoofingInterpreter.run(input, output);
-
-    final spoofProbability = output[0][0];
-
-    // Return true if the spoof probability is high
-    return spoofProbability > 0.5; // You may adjust this threshold
-  }
-
-  bool _isEyeBlinking(Face face) {
-    final leftEyeOpenProbability = face.leftEyeOpenProbability ?? 1.0;
-    final rightEyeOpenProbability = face.rightEyeOpenProbability ?? 1.0;
-
-    if (leftEyeOpenProbability < 0.2 && rightEyeOpenProbability < 0.2) {
-      _consecutiveClosedFrames++;
-    } else {
-      _consecutiveClosedFrames = 0;
+  img.Image _applyHistogramEqualization(img.Image image) {
+    // Create histogram
+    List<int> histogram = List.filled(256, 0);
+    for (int y = 0; y < image.height; y++) {
+      for (int x = 0; x < image.width; x++) {
+        int brightness = img.getRed(image.getPixel(x, y));
+        histogram[brightness]++;
+      }
     }
 
-    return _consecutiveClosedFrames >= _blinkThreshold;
+    // Create cumulative distribution function (CDF)
+    List<int> cdf = List.filled(256, 0);
+    cdf[0] = histogram[0];
+    for (int i = 1; i < 256; i++) {
+      cdf[i] = cdf[i - 1] + histogram[i];
+    }
+
+    // Normalize CDF
+    int minCDF = cdf.firstWhere((value) => value != 0);
+    for (int i = 0; i < 256; i++) {
+      cdf[i] = ((cdf[i] - minCDF) / (image.width * image.height - minCDF) * 255)
+          .round();
+    }
+
+    // Apply equalization
+    img.Image equalizedImage = img.Image.from(image);
+    for (int y = 0; y < equalizedImage.height; y++) {
+      for (int x = 0; x < equalizedImage.width; x++) {
+        int pixel = equalizedImage.getPixel(x, y);
+        int r = cdf[img.getRed(pixel)];
+        int g = cdf[img.getGreen(pixel)];
+        int b = cdf[img.getBlue(pixel)];
+        equalizedImage.setPixel(x, y, img.getColor(r, g, b));
+      }
+    }
+
+    return equalizedImage;
   }
 
   img.Image _alignFace(img.Image image, Face face) {
@@ -231,65 +222,47 @@ class _LecturerTakeAttendancePageState
     return alignedFace;
   }
 
-  Future<int> _identifyAndMarkAttendance(
-      List<List<double>> embeddingsList) async {
-    _identifiedStudents.clear();
+  Future<Map<String, dynamic>?> _findBestMatch(List<double> embeddings) async {
     final usersSnapshot =
         await FirebaseFirestore.instance.collection('Users').get();
-    int matchedFacesCount = 0;
-    Set<String> usedMatches = {};
+    double maxSimilarity = -1.0;
+    Map<String, dynamic>? bestMatch;
 
-    for (var newEmbeddings in embeddingsList) {
-      double maxSimilarity = -1.0;
-      String bestMatch = '';
+    embeddings = _normalizeEmbeddings(embeddings);
 
-      newEmbeddings = _normalizeEmbeddings(newEmbeddings);
+    for (var userDoc in usersSnapshot.docs) {
+      final userData = userDoc.data();
+      final storedEmbeddings = userData['embeddings'] as List<dynamic>?;
 
-      for (var userDoc in usersSnapshot.docs) {
-        final userData = userDoc.data();
-        final storedEmbeddings = userData['embeddings'] as List<dynamic>?;
-
-        if (storedEmbeddings == null ||
-            storedEmbeddings.isEmpty ||
-            usedMatches.contains(userDoc.id)) {
-          continue;
-        }
-
-        final convertedEmbeddings = storedEmbeddings
-            .map((e) => e is double ? e : double.tryParse(e.toString()) ?? 0.0)
-            .toList();
-
-        final normalizedStoredEmbeddings =
-            _normalizeEmbeddings(convertedEmbeddings);
-
-        final similarity = _calculateCosineSimilarity(
-            normalizedStoredEmbeddings, newEmbeddings);
-
-        if (similarity.isNaN || similarity.isInfinite) {
-          continue;
-        }
-
-        if (similarity > maxSimilarity) {
-          maxSimilarity = similarity;
-          bestMatch = userDoc.id;
-        }
+      if (storedEmbeddings == null || storedEmbeddings.isEmpty) {
+        continue;
       }
 
-      if (maxSimilarity > 0.8) {
-        usedMatches.add(bestMatch);
-        final matchedUserData =
-            usersSnapshot.docs.firstWhere((doc) => doc.id == bestMatch).data();
-        final firstName = matchedUserData['firstName'] ?? 'Unknown';
-        final lastName = matchedUserData['lastName'] ?? 'Unknown';
-        final studentId = matchedUserData['studentId'] ?? 'Unknown';
-        _identifiedStudents.add('$firstName $lastName (ID: $studentId)');
-        await _markAttendance(bestMatch);
-        matchedFacesCount++;
+      final convertedEmbeddings = storedEmbeddings
+          .map((e) => e is double ? e : double.tryParse(e.toString()) ?? 0.0)
+          .toList();
+
+      final normalizedStoredEmbeddings =
+          _normalizeEmbeddings(convertedEmbeddings);
+
+      final similarity =
+          _calculateCosineSimilarity(normalizedStoredEmbeddings, embeddings);
+
+      if (similarity.isNaN || similarity.isInfinite) {
+        continue;
+      }
+
+      if (similarity > maxSimilarity) {
+        maxSimilarity = similarity;
+        bestMatch = userData;
       }
     }
 
-    setState(() {});
-    return matchedFacesCount;
+    if (maxSimilarity > 0.6) {
+      return bestMatch;
+    }
+
+    return null;
   }
 
   List<double> _normalizeEmbeddings(List<double> embeddings) {
@@ -390,7 +363,6 @@ class _LecturerTakeAttendancePageState
   @override
   void dispose() {
     _interpreter.close();
-    _antiSpoofingInterpreter.close(); // Dispose the anti-spoofing interpreter
     super.dispose();
   }
 
@@ -432,9 +404,7 @@ class _LecturerTakeAttendancePageState
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: ElevatedButton(
-                      onPressed: _isProcessing ||
-                              !_isModelLoaded ||
-                              !_isAntiSpoofingModelLoaded
+                      onPressed: _isProcessing || !_isModelLoaded
                           ? null
                           : _processImage,
                       child: Text('Process and Mark Attendance'),
