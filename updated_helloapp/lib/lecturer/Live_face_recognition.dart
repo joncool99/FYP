@@ -194,7 +194,7 @@ class _LiveFaceRecognitionPageState extends State<LiveFaceRecognitionPage> {
       }
     }
 
-    if (maxSimilarity > 0.8) {
+    if (maxSimilarity > 0.7) {
       // Adjusted threshold
       final matchedUserData =
           usersSnapshot.docs.firstWhere((doc) => doc.id == bestMatch).data();
