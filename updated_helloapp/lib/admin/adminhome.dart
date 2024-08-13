@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:helloapp/admin/accounts.dart';
 import 'package:helloapp/admin/admin_records.dart';
 import 'package:helloapp/timetable/timetable_home.dart';
-import 'package:helloapp/attendance/captureImages.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class AdminhomePage extends StatelessWidget {

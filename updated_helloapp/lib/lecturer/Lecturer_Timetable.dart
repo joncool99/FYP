@@ -101,7 +101,7 @@ class _LecturerTimetableState extends State<LecturerTimetable> {
         backgroundColor: Colors.white,
         elevation: 0,
         bottom: PreferredSize(
-          preferredSize: Size.fromHeight(4.0),
+          preferredSize: const Size.fromHeight(4.0),
           child: Container(
             color: Colors.blue[800],
             height: 3.0,
@@ -118,11 +118,11 @@ class _LecturerTimetableState extends State<LecturerTimetable> {
               onViewChanged: (ViewChangedDetails details) {
                 _focusedDay = details.visibleDates[0];
               },
-              monthViewSettings: MonthViewSettings(
+              monthViewSettings: const MonthViewSettings(
                 appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
                 showAgenda: true,
               ),
-              timeSlotViewSettings: TimeSlotViewSettings(
+              timeSlotViewSettings: const TimeSlotViewSettings(
                 startHour: 7,
                 endHour: 18,
                 timeInterval: Duration(minutes: 60),
