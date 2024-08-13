@@ -76,100 +76,103 @@ class _TimetableScreenState extends State<TimetableScreen> {
         iconTheme: const IconThemeData(color: Colors.blue),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextFormField(
-                decoration: const InputDecoration(labelText: 'Course Name'),
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Please enter course name';
-                  }
-                  return null;
-                },
-                onSaved: (value) {
-                  courseName = value!;
-                },
-              ),
-              TextFormField(
-                decoration: const InputDecoration(labelText: 'Course ID'),
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Please enter course ID';
-                  }
-                  return null;
-                },
-                onSaved: (value) {
-                  courseId = value!;
-                },
-              ),
-              TextFormField(
-                decoration: const InputDecoration(labelText: 'Lecturer Email'),
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Please enter lecturer email';
-                  }
-                  return null;
-                },
-                onSaved: (value) {
-                  lecturerEmail = value!;
-                },
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _addLesson,
-                child: const Text('Add Lesson'),
-              ),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                itemCount: lessons.length,
-                itemBuilder: (context, index) {
-                  return LessonWidget(
-                    lesson: lessons[index],
-                    onDelete: () {
-                      setState(() {
-                        lessons.removeAt(index);
-                      });
-                    },
-                  );
-                },
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _emailController,
-                decoration: InputDecoration(
-                  labelText: 'Student Email',
-                  suffixIcon: IconButton(
-                    icon: Icon(Icons.add),
-                    onPressed: _addStudentEmail,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextFormField(
+                  decoration: const InputDecoration(labelText: 'Course Name'),
+                  validator: (value) {
+                    if (value!.isEmpty) {
+                      return 'Please enter course name';
+                    }
+                    return null;
+                  },
+                  onSaved: (value) {
+                    courseName = value!;
+                  },
+                ),
+                TextFormField(
+                  decoration: const InputDecoration(labelText: 'Course ID'),
+                  validator: (value) {
+                    if (value!.isEmpty) {
+                      return 'Please enter course ID';
+                    }
+                    return null;
+                  },
+                  onSaved: (value) {
+                    courseId = value!;
+                  },
+                ),
+                TextFormField(
+                  decoration:
+                      const InputDecoration(labelText: 'Lecturer Email'),
+                  validator: (value) {
+                    if (value!.isEmpty) {
+                      return 'Please enter lecturer email';
+                    }
+                    return null;
+                  },
+                  onSaved: (value) {
+                    lecturerEmail = value!;
+                  },
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _addLesson,
+                  child: const Text('Add Lesson'),
+                ),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
+                  itemCount: lessons.length,
+                  itemBuilder: (context, index) {
+                    return LessonWidget(
+                      lesson: lessons[index],
+                      onDelete: () {
+                        setState(() {
+                          lessons.removeAt(index);
+                        });
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _emailController,
+                  decoration: InputDecoration(
+                    labelText: 'Student Email',
+                    suffixIcon: IconButton(
+                      icon: Icon(Icons.add),
+                      onPressed: _addStudentEmail,
+                    ),
                   ),
                 ),
-              ),
-              ElevatedButton(
-                onPressed: _addStudentEmail,
-                child: const Text('Add Student'),
-              ),
-              const SizedBox(height: 20),
-              Text('Added Students:'),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                itemCount: studentEmails.length,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    title: Text(studentEmails[index]),
-                  );
-                },
-              ),
-              ElevatedButton(
-                onPressed: _submitTimetable,
-                child: const Text('Submit Course'),
-              ),
-            ],
+                ElevatedButton(
+                  onPressed: _addStudentEmail,
+                  child: const Text('Add Student'),
+                ),
+                const SizedBox(height: 20),
+                Text('Added Students:'),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
+                  itemCount: studentEmails.length,
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                      title: Text(studentEmails[index]),
+                    );
+                  },
+                ),
+                ElevatedButton(
+                  onPressed: _submitTimetable,
+                  child: const Text('Submit Course'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
