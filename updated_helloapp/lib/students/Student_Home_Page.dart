@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:camera/camera.dart';
-import 'package:helloapp/students/student_registerFace.dart';
 import 'Student_Timetable.dart';
 import 'Student_View_Attendance.dart';
 import 'Student_View_Profile.dart';
@@ -78,13 +77,23 @@ class _StudentHomepageState extends State<StudentHomePage> {
             .get();
 
         for (var lessonDoc in lessonsSnapshot.docs) {
+          // Fetch attendance status
+          DocumentSnapshot attendanceDoc = await lessonDoc.reference
+              .collection('Attendance')
+              .doc(widget.email)
+              .get();
+
+          String status =
+              attendanceDoc.exists ? attendanceDoc.get('status') : 'absent';
+
           lessons.add({
             'courseName': courseDoc.get('courseName') ?? 'No Course Name',
             'courseId': courseDoc.get('courseId'),
             'lessonName': lessonDoc.get('lessonName') ?? 'No Lesson Name',
-            'startTime': lessonDoc.get('startTime') ?? 'No Start Time',
-            'endTime': lessonDoc.get('endTime') ?? 'No End Time',
+            'startTime': lessonDoc.get('startTime') ?? '00:00',
+            'endTime': lessonDoc.get('endTime') ?? '00:00',
             'location': lessonDoc.get('location') ?? 'No Location',
+            'status': status, // Add the status to the lesson map
           });
         }
       }
@@ -96,6 +105,7 @@ class _StudentHomepageState extends State<StudentHomePage> {
       print('Error fetching today\'s lessons: $e');
     }
   }
+
 
   Future<void> _initializeCamera() async {
     try {
@@ -118,10 +128,10 @@ class _StudentHomepageState extends State<StudentHomePage> {
   Widget build(BuildContext context) {
     final List<Widget> _widgetOptions = <Widget>[
       HomeWidget(
-          studentName: studentName,
-          profilePhotoUrl: profilePhotoUrl,
-          lessons: todayLessons,
-          camera: firstCamera),
+        studentName: studentName,
+        profilePhotoUrl: profilePhotoUrl,
+        lessons: todayLessons,
+      ),
       ViewTimetable(),
       const RecordPage(),
       ViewProfilePage(),
@@ -162,15 +172,13 @@ class HomeWidget extends StatelessWidget {
   final String studentName;
   final String? profilePhotoUrl;
   final List<Map<String, dynamic>> lessons;
-  final CameraDescription? camera;
 
   const HomeWidget({
-    Key? key,
+    super.key,
     required this.studentName,
     required this.profilePhotoUrl,
     required this.lessons,
-    required this.camera,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -178,7 +186,7 @@ class HomeWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const SizedBox(height: kToolbarHeight), //height of app bar
+          const SizedBox(height: kToolbarHeight), // height of app bar
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
@@ -224,16 +232,26 @@ class HomeWidget extends StatelessWidget {
             ),
           ),
           ...lessons.map((lesson) {
+            DateTime now = DateTime.now();
+            DateTime startTime = _parseTime(now, lesson['startTime']);
+            DateTime endTime = _parseTime(now, lesson['endTime']);
+            String status = lesson['status'] ?? 'absent';
+
             return Container(
               margin:
                   const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
-                gradient: const LinearGradient(
-                  colors: [Colors.white, Color(0xFFAAACF8)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
+                color: status == 'present'
+                    ? const Color.fromARGB(255, 132, 240, 199)
+                    : null, // Change to green if present
+                gradient: status == 'present'
+                    ? null
+                    : const LinearGradient(
+                        colors: [Colors.white, Color(0xFFAAACF8)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.grey.withOpacity(0.5),
@@ -254,40 +272,53 @@ class HomeWidget extends StatelessWidget {
                     Text(lesson['courseName']),
                     Row(
                       children: [
-                        Icon(Icons.access_time, size: 20, color: Colors.grey),
-                        SizedBox(width: 5),
+                        const Icon(Icons.access_time, size: 20, color: Colors.grey),
+                        const SizedBox(width: 5),
                         Text('${lesson['startTime']} - ${lesson['endTime']}'),
                       ],
                     ),
                     Row(
                       children: [
-                        Icon(Icons.place, size: 20, color: Colors.grey),
-                        SizedBox(width: 5),
+                        const Icon(Icons.place, size: 20, color: Colors.grey),
+                        const SizedBox(width: 5),
                         Text(lesson['location']),
                       ],
                     ),
                   ],
                 ),
-                onTap: camera != null
-                    ? () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => StudentTakeAttendancePage(
-                              camera: camera!,
-                              courseId: lesson['courseId'],
-                              courseName: lesson['courseName'],
-                              lessonName: lesson['lessonName'],
-                            ),
-                          ),
-                        );
-                      }
-                    : null,
+                onTap: () {
+                  if (now.isBefore(startTime) || now.isAfter(endTime)) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                            'Lesson duration has not started or has ended.'),
+                      ),
+                    );
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => StudentTakeAttendancePage(
+                          courseId: lesson['courseId'],
+                          courseName: lesson['courseName'],
+                          lessonName: lesson['lessonName'],
+                        ),
+                      ),
+                    );
+                  }
+                },
               ),
             );
           }).toList(),
         ],
       ),
     );
+  }
+
+  DateTime _parseTime(DateTime now, String timeString) {
+    List<String> timeParts = timeString.split(':');
+    int hour = int.parse(timeParts[0]);
+    int minute = int.parse(timeParts[1]);
+    return DateTime(now.year, now.month, now.day, hour, minute);
   }
 }
