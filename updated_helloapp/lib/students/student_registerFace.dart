@@ -28,19 +28,37 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
   late Interpreter _interpreter;
   bool _isModelLoaded = false;
   bool _isCameraInitialized = false;
-  List<List<double>> embeddingsList = [];
-  List<Map<String, dynamic>> landmarksList = [];
+  bool _isFaceRegistered = false;
 
   @override
   void initState() {
     super.initState();
     _initializeCamera();
     _loadModel();
+    _checkIfFaceIsRegistered();
   }
 
   Future<void> _initializeCamera() async {
     print('Initializing camera...');
-    _controller = CameraController(widget.camera, ResolutionPreset.high);
+    final cameras = await availableCameras();
+    CameraDescription? frontCamera;
+
+    for (var camera in cameras) {
+      if (camera.lensDirection == CameraLensDirection.front) {
+        frontCamera = camera;
+        break;
+      }
+    }
+
+    if (frontCamera != null) {
+      _controller = CameraController(frontCamera, ResolutionPreset.high);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Front camera not found.')),
+      );
+      return;
+    }
+
     try {
       await _controller.initialize().then((_) {
         if (!mounted) return;
@@ -79,16 +97,67 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
     }
   }
 
+  Future<void> _checkIfFaceIsRegistered() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final docSnapshot = await FirebaseFirestore.instance
+            .collection('Users')
+            .doc(user.email)
+            .get();
+
+        if (docSnapshot.exists && docSnapshot.data()?['embeddings'] != null) {
+          setState(() {
+            _isFaceRegistered = true;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Face already registered.')),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error checking face registration: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error checking face registration: $e')),
+      );
+    }
+  }
+
   Future<void> _captureAndRegisterFace() async {
-    if (!_controller.value.isInitialized || !_isModelLoaded || _isProcessing) {
+    if (!_controller.value.isInitialized ||
+        !_isModelLoaded ||
+        _isProcessing ||
+        _isFaceRegistered) {
       print(
-          'Button disabled. _isProcessing: $_isProcessing, _isModelLoaded: $_isModelLoaded, _controller initialized: ${_controller.value.isInitialized}');
+          'Button disabled. _isProcessing: $_isProcessing, _isModelLoaded: $_isModelLoaded, _isFaceRegistered: $_isFaceRegistered, _controller initialized: ${_controller.value.isInitialized}');
       return;
     }
 
     setState(() => _isProcessing = true);
 
     try {
+      // Show an alert dialog to remind the user that face registration can only be done once
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Face Registration'),
+            content: const Text('Face registration can only be done once.'),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('OK'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
+
+      List<List<double>> embeddingsList = [];
+      List<Map<String, dynamic>> landmarksList = [];
+
       for (int i = 0; i < 5; i++) {
         print('Capturing image...');
         final XFile imageFile = await _controller.takePicture();
@@ -99,13 +168,13 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
         final GoogleVisionImage visionImage =
             GoogleVisionImage.fromFilePath(imageFile.path);
         final FaceDetector faceDetector = GoogleVision.instance.faceDetector(
-          FaceDetectorOptions(enableLandmarks: true),
+          const FaceDetectorOptions(enableLandmarks: true),
         );
         final List<Face> faces = await faceDetector.processImage(visionImage);
 
         if (faces.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('No face detected! Please try again.')),
+            const SnackBar(content: Text('No face detected! Please try again.')),
           );
           setState(() => _isProcessing = false);
           return;
@@ -141,13 +210,6 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
         };
         landmarksList.add(landmarks);
 
-        print('Saving face image...');
-        final Directory appDocDir = await getApplicationDocumentsDirectory();
-        final String faceImagePath = path.join(appDocDir.path,
-            'face_${DateTime.now().millisecondsSinceEpoch}.png');
-        final File faceImageFile = File(faceImagePath);
-        faceImageFile.writeAsBytesSync(img.encodePng(alignedFaceImage));
-
         await Future.delayed(Duration(seconds: 1));
       }
 
@@ -157,8 +219,12 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
       await _saveEmbeddingsAndLandmarksToFirestore(
           averageEmbeddings, landmarksList);
 
+      setState(() {
+        _isFaceRegistered = true;
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Face registered successfully!')),
+        const SnackBar(content: Text('Face registered successfully!')),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -320,13 +386,18 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Register Face'),
+        title: const Text('Register Face'),
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           if (!_isCameraInitialized || !_isModelLoaded)
-            Center(child: CircularProgressIndicator())
+            const Center(child: CircularProgressIndicator())
+          else if (_isFaceRegistered)
+            const Center(
+              child: Text('Face already registered.',
+                  style: TextStyle(fontSize: 18, color: Colors.green)),
+            )
           else
             Expanded(
               child: CameraPreview(_controller),
@@ -334,10 +405,10 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: ElevatedButton(
-              onPressed: _isProcessing || !_isModelLoaded
+              onPressed: _isProcessing || !_isModelLoaded || _isFaceRegistered
                   ? null
                   : _captureAndRegisterFace,
-              child: Text('Capture and Register Face'),
+              child: const Text('Capture and Register Face'),
             ),
           ),
         ],
