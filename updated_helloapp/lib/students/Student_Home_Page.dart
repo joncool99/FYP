@@ -106,7 +106,6 @@ class _StudentHomepageState extends State<StudentHomePage> {
     }
   }
 
-
   Future<void> _initializeCamera() async {
     try {
       final cameras = await availableCameras();
@@ -244,7 +243,7 @@ class HomeWidget extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 color: status == 'present'
                     ? const Color.fromARGB(255, 132, 240, 199)
-                    : null, // Change to green if present
+                    : null, // Change to green if present,
                 gradient: status == 'present'
                     ? null
                     : const LinearGradient(
@@ -272,7 +271,8 @@ class HomeWidget extends StatelessWidget {
                     Text(lesson['courseName']),
                     Row(
                       children: [
-                        const Icon(Icons.access_time, size: 20, color: Colors.grey),
+                        const Icon(Icons.access_time,
+                            size: 20, color: Colors.grey),
                         const SizedBox(width: 5),
                         Text('${lesson['startTime']} - ${lesson['endTime']}'),
                       ],
@@ -284,6 +284,17 @@ class HomeWidget extends StatelessWidget {
                         Text(lesson['location']),
                       ],
                     ),
+                    if (status == 'present')
+                      const Padding(
+                        padding: EdgeInsets.only(top: 4.0),
+                        child: Text(
+                          'Present',
+                          style: TextStyle(
+                            color: Color.fromARGB(255, 0, 0, 0),
+                            
+                          ),
+                        ),
+                      ),
                   ],
                 ),
                 onTap: () {
