@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'timetable_entry.dart';
+
 
 class ViewTimetable extends StatefulWidget {
   @override
@@ -81,7 +81,7 @@ class _ViewTimetableState extends State<ViewTimetable> {
         backgroundColor: Colors.white,
         elevation: 0,
         bottom: PreferredSize(
-          preferredSize: Size.fromHeight(4.0),
+          preferredSize: const Size.fromHeight(4.0),
           child: Container(
             color: Colors.blue[800],
             height: 3.0,
@@ -95,11 +95,11 @@ class _ViewTimetableState extends State<ViewTimetable> {
         onViewChanged: (ViewChangedDetails details) {
           _focusedDay = details.visibleDates[0];
         },
-        monthViewSettings: MonthViewSettings(
+        monthViewSettings:const MonthViewSettings(
           appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
           showAgenda: true,
         ),
-        timeSlotViewSettings: TimeSlotViewSettings(
+        timeSlotViewSettings:const  TimeSlotViewSettings(
           startHour: 7,
           endHour: 18,
           timeInterval: Duration(minutes: 60),

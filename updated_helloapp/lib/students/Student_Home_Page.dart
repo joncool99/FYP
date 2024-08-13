@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:camera/camera.dart';
 import 'Student_Timetable.dart';
 import 'Student_View_Attendance.dart';
@@ -19,6 +20,7 @@ class _StudentHomepageState extends State<StudentHomePage> {
   int _selectedIndex = 0;
   String studentName = '';
   String? profilePhotoUrl;
+  List<Map<String, dynamic>> todayLessons = [];
   CameraDescription? firstCamera;
 
   @override
@@ -45,6 +47,7 @@ class _StudentHomepageState extends State<StudentHomePage> {
           studentName = snapshot.get('firstName') ?? 'Student';
           profilePhotoUrl = snapshot.get('imageUrl');
         });
+        _fetchTodayLessons();
       } else {
         print('No document found for the email: ${widget.email}');
       }
@@ -52,6 +55,57 @@ class _StudentHomepageState extends State<StudentHomePage> {
       print('Error fetching student name: $e');
     }
   }
+
+  Future<void> _fetchTodayLessons() async {
+    try {
+      DateTime now = DateTime.now();
+      DateTime startOfDay = DateTime(now.year, now.month, now.day);
+      DateTime endOfDay = DateTime(now.year, now.month, now.day, 23, 59, 59);
+
+      QuerySnapshot coursesSnapshot = await FirebaseFirestore.instance
+          .collection('Courses')
+          .where('students', arrayContains: widget.email)
+          .get();
+
+      List<Map<String, dynamic>> lessons = [];
+
+      for (var courseDoc in coursesSnapshot.docs) {
+        QuerySnapshot lessonsSnapshot = await courseDoc.reference
+            .collection('Lessons')
+            .where('date', isGreaterThanOrEqualTo: startOfDay)
+            .where('date', isLessThanOrEqualTo: endOfDay)
+            .get();
+
+        for (var lessonDoc in lessonsSnapshot.docs) {
+          // Fetch attendance status
+          DocumentSnapshot attendanceDoc = await lessonDoc.reference
+              .collection('Attendance')
+              .doc(widget.email)
+              .get();
+
+          String status =
+              attendanceDoc.exists ? attendanceDoc.get('status') : 'absent';
+
+          lessons.add({
+            'courseName': courseDoc.get('courseName') ?? 'No Course Name',
+            'courseId': courseDoc.get('courseId'),
+            'lessonName': lessonDoc.get('lessonName') ?? 'No Lesson Name',
+            'startTime': lessonDoc.get('startTime') ?? '00:00',
+            'endTime': lessonDoc.get('endTime') ?? '00:00',
+            'location': lessonDoc.get('location') ?? 'No Location',
+            'status': status, // Add the status to the lesson map
+          });
+        }
+      }
+
+      setState(() {
+        todayLessons = lessons;
+      });
+    } catch (e) {
+      print('Error fetching today\'s lessons: $e');
+    }
+  }
+
 
   Future<void> _initializeCamera() async {
     try {
@@ -74,11 +128,10 @@ class _StudentHomepageState extends State<StudentHomePage> {
   Widget build(BuildContext context) {
     final List<Widget> _widgetOptions = <Widget>[
       HomeWidget(
-          email: widget.email,
-          studentName: studentName,
-          profilePhotoUrl: profilePhotoUrl,
-          lessons: [],
-          camera: firstCamera,),
+        studentName: studentName,
+        profilePhotoUrl: profilePhotoUrl,
+        lessons: todayLessons,
+      ),
       ViewTimetable(),
       const RecordPage(),
       ViewProfilePage(),
@@ -115,78 +168,17 @@ class _StudentHomepageState extends State<StudentHomePage> {
   }
 }
 
-class HomeWidget extends StatefulWidget {
-  final String email;
+class HomeWidget extends StatelessWidget {
   final String studentName;
   final String? profilePhotoUrl;
-  List<Map<String, dynamic>> lessons;
-  final CameraDescription? camera;
+  final List<Map<String, dynamic>> lessons;
 
-  HomeWidget({
+  const HomeWidget({
     super.key,
-    required this.email,
     required this.studentName,
     required this.profilePhotoUrl,
     required this.lessons,
-    required this.camera,
   });
-
-  @override
-  State<HomeWidget> createState() => _HomeWidgetState();
-}
-
-class _HomeWidgetState extends State<HomeWidget> {
-  Future<void> _fetchTodayLessons() async {
-    try {
-      DateTime now = DateTime.now();
-      DateTime startOfDay = DateTime(now.year, now.month, now.day);
-      DateTime endOfDay = DateTime(now.year, now.month, now.day, 23, 59, 59);
-
-      QuerySnapshot coursesSnapshot = await FirebaseFirestore.instance
-          .collection('Courses')
-          .where('students', arrayContains: widget.email)
-          .get();
-
-      widget.lessons = [];
-
-      for (var courseDoc in coursesSnapshot.docs) {
-        QuerySnapshot lessonsSnapshot = await courseDoc.reference
-            .collection('Lessons')
-            .where('date', isGreaterThanOrEqualTo: startOfDay)
-            .where('date', isLessThanOrEqualTo: endOfDay)
-            .get();
-
-        for (var lessonDoc in lessonsSnapshot.docs) {
-          QuerySnapshot attendanceSnapshot = await lessonDoc.reference
-              .collection('Attendance')
-              .where('email', isEqualTo: widget.email)
-              .get();
-
-          bool isPresent = attendanceSnapshot.docs.isNotEmpty;
-
-          widget.lessons.add({
-            'courseName': courseDoc.get('courseName') ?? 'No Course Name',
-            'courseId': courseDoc.get('courseId'),
-            'lessonName': lessonDoc.get('lessonName') ?? 'No Lesson Name',
-            'startTime': lessonDoc.get('startTime') ?? 'No Start Time',
-            'endTime': lessonDoc.get('endTime') ?? 'No End Time',
-            'location': lessonDoc.get('location') ?? 'No Location',
-            'present': isPresent,
-          });
-        }
-      }
-      setState(() {
-      });
-    }catch (e) {
-      print('Error fetching today\'s lessons: $e');
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchTodayLessons();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -194,16 +186,16 @@ class _HomeWidgetState extends State<HomeWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const SizedBox(height: kToolbarHeight), //height of app bar
+          const SizedBox(height: kToolbarHeight), // height of app bar
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
               children: <Widget>[
                 CircleAvatar(
-                  backgroundImage: widget.profilePhotoUrl != null
-                      ? NetworkImage(widget.profilePhotoUrl!)
+                  backgroundImage: profilePhotoUrl != null
+                      ? NetworkImage(profilePhotoUrl!)
                       : const AssetImage('assets/images/default_user.png')
-                  as ImageProvider,
+                          as ImageProvider,
                   backgroundColor: Colors.grey,
                   radius: 30,
                 ),
@@ -212,7 +204,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      'Hi, ${widget.studentName}',
+                      'Hi, $studentName',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -239,17 +231,27 @@ class _HomeWidgetState extends State<HomeWidget> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
           ),
-          ...widget.lessons.map((lesson) {
+          ...lessons.map((lesson) {
+            DateTime now = DateTime.now();
+            DateTime startTime = _parseTime(now, lesson['startTime']);
+            DateTime endTime = _parseTime(now, lesson['endTime']);
+            String status = lesson['status'] ?? 'absent';
+
             return Container(
               margin:
-              const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
-                gradient: const LinearGradient(
-                  colors: [Colors.white, Color(0xFFAAACF8)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
+                color: status == 'present'
+                    ? const Color.fromARGB(255, 132, 240, 199)
+                    : null, // Change to green if present
+                gradient: status == 'present'
+                    ? null
+                    : const LinearGradient(
+                        colors: [Colors.white, Color(0xFFAAACF8)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.grey.withOpacity(0.5),
@@ -280,39 +282,43 @@ class _HomeWidgetState extends State<HomeWidget> {
                         const Icon(Icons.place, size: 20, color: Colors.grey),
                         const SizedBox(width: 5),
                         Text(lesson['location']),
-                        const Expanded(child: SizedBox()),
-                        Text(lesson['present']?'Present':'',
-                            style: const TextStyle(
-                              color: Colors.indigo,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            )),
                       ],
                     ),
                   ],
                 ),
-                onTap: widget.camera != null
-                    ? () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => StudentTakeAttendancePage(
-                        camera: widget.camera!,
-                        courseId: lesson['courseId'],
-                        courseName: lesson['courseName'],
-                        lessonName: lesson['lessonName'],
+                onTap: () {
+                  if (now.isBefore(startTime) || now.isAfter(endTime)) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                            'Lesson duration has not started or has ended.'),
                       ),
-                    ),
-                  ).then((_) => setState(() {
-                    _fetchTodayLessons();
-                  }));
-                }
-                    : null,
+                    );
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => StudentTakeAttendancePage(
+                          courseId: lesson['courseId'],
+                          courseName: lesson['courseName'],
+                          lessonName: lesson['lessonName'],
+                        ),
+                      ),
+                    );
+                  }
+                },
               ),
             );
-          }),
+          }).toList(),
         ],
       ),
     );
+  }
+
+  DateTime _parseTime(DateTime now, String timeString) {
+    List<String> timeParts = timeString.split(':');
+    int hour = int.parse(timeParts[0]);
+    int minute = int.parse(timeParts[1]);
+    return DateTime(now.year, now.month, now.day, hour, minute);
   }
 }

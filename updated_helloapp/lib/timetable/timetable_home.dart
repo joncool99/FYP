@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:helloapp/timetable/course_overview.dart';
-import 'package:helloapp/timetable/create_course.dart';
-import 'package:helloapp/timetable/edit_course.dart';
 import 'package:helloapp/timetable/view_timetable.dart';
 
 

@@ -12,14 +12,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
 
 class StudentTakeAttendancePage extends StatefulWidget {
-  final CameraDescription camera;
   final String courseId;
   final String courseName;
   final String lessonName;
 
   const StudentTakeAttendancePage({
     Key? key,
-    required this.camera,
     required this.courseId,
     required this.courseName,
     required this.lessonName,
@@ -46,14 +44,32 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
 
   Future<void> _initializeCamera() async {
     print('Initializing camera...');
-    _controller = CameraController(widget.camera, ResolutionPreset.high);
+    CameraDescription? frontCamera;
+
+    // Find the front camera
+    for (CameraDescription camera in await availableCameras()) {
+      if (camera.lensDirection == CameraLensDirection.front) {
+        frontCamera = camera;
+        break;
+      }
+    }
+
+    if (frontCamera == null) {
+      print('No front camera found.');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No front camera found.')),
+      );
+      return;
+    }
+
+    _controller = CameraController(frontCamera, ResolutionPreset.high);
     try {
       await _controller.initialize().then((_) {
         if (!mounted) return;
         setState(() {
           _isCameraInitialized = true;
         });
-        print('Camera initialized');
+        print('Front camera initialized');
       });
     } catch (e) {
       print('Error initializing camera: $e');
@@ -95,10 +111,10 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
     setState(() => _isProcessing = true);
 
     try {
+      // Capture and verify face logic remains the same
       List<List<double>> newEmbeddingsList = [];
       for (int i = 0; i < 3; i++) {
         // Capture 3 images for better accuracy
-        // Capture the image
         print('Capturing image...');
         final XFile imageFile = await _controller.takePicture();
         print('Picture taken: ${imageFile.path}');
@@ -109,7 +125,7 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
         final GoogleVisionImage visionImage =
             GoogleVisionImage.fromFilePath(imageFile.path);
         final FaceDetector faceDetector = GoogleVision.instance.faceDetector(
-          FaceDetectorOptions(enableLandmarks: true),
+          const FaceDetectorOptions(enableLandmarks: true),
         );
         final List<Face> faces = await faceDetector.processImage(visionImage);
 
@@ -135,7 +151,7 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
         final newEmbeddings = await _getEmbeddings(faceImage);
         newEmbeddingsList.add(newEmbeddings);
 
-        await Future.delayed(Duration(seconds: 1)); // Delay between captures
+        await Future.delayed(const Duration(seconds: 1)); // Delay between captures
       }
 
       // Calculate average embeddings for verification
@@ -149,11 +165,11 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
         // Mark attendance
         await _markAttendance();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Attendance marked successfully!')),
+          const SnackBar(content: Text('Attendance marked successfully!')),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Face not recognized. Please try again.')),
+          const SnackBar(content: Text('Face not recognized. Please try again.')),
         );
       }
     } catch (e) {
@@ -297,13 +313,13 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Take Attendance'),
+        title: const Text('Take Attendance'),
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           if (!_isCameraInitialized || !_isModelLoaded)
-            Center(child: CircularProgressIndicator())
+            const Center(child: CircularProgressIndicator())
           else
             Expanded(
               child: CameraPreview(_controller),
@@ -314,7 +330,7 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
               onPressed: _isProcessing || !_isModelLoaded
                   ? null
                   : _captureAndVerifyFace,
-              child: Text('Capture and Verify Face'),
+              child: const Text('Capture and Verify Face'),
             ),
           ),
         ],

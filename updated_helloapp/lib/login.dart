@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:helloapp/students/Student_Home_Page.dart'; // Ensure you have the correct import path
-import 'lecturer/Lecturer_Home_Page.dart'; // Ensure you have the correct import path
+
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -26,10 +26,11 @@ class _LoginPageState extends State<LoginPage> {
         String userEmail = _emailController.text.trim();
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Successfully logged in to the account.')),
+          const SnackBar(
+              content: Text('Successfully logged in to the account.')),
         );
 
-
+        // Redirect based on email domain
         if (userEmail.endsWith('@gmail.com')) {
           Navigator.pushNamed(context, '/adminhome');
         } else if (userEmail.endsWith('@uowmail.edu.au')) {
@@ -50,19 +51,10 @@ class _LoginPageState extends State<LoginPage> {
         }
       } on FirebaseAuthException catch (e) {
         String message;
-        switch (e.code) {
-          case 'user-not-found':
-            message = 'No user found for that email.';
-            break;
-          case 'wrong-password':
-            message = 'Wrong password provided for that user.';
-            break;
-          case 'too-many-requests':
-            message =
-                'Too many login attempts. Please wait and try again later or contact your System Admin.';
-            break;
-          default:
-            message = 'An error occurred. Please try again.';
+        if (e.code == 'user-not-found' || e.code == 'wrong-password') {
+          message = 'Wrong username or password. Please try again.';
+        } else {
+          message = 'An error occurred. Please check your Username or Password and try again.';
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message)),

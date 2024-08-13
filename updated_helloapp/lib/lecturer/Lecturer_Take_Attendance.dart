@@ -1,13 +1,13 @@
 import 'dart:typed_data';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_ml_vision/google_ml_vision.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:image/image.dart' as img;
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:math';
+import 'package:path/path.dart' as p; // Import the path package
 
 class LecturerTakeAttendancePage extends StatefulWidget {
   final String courseId;
@@ -40,6 +40,7 @@ class _LecturerTakeAttendancePageState
   File? _imageFile;
   final ImagePicker _picker = ImagePicker();
   List<String> _identifiedStudents = [];
+  Set<String> _matchedUserIds = {}; // To track already identified user IDs
 
   @override
   void initState() {
@@ -54,7 +55,7 @@ class _LecturerTakeAttendancePageState
       setState(() {
         _isModelLoaded = true;
       });
-      print('Model loaded');
+      print('Model loaded successfully');
     } catch (e) {
       print('Error loading model: $e');
       setState(() {
@@ -70,9 +71,20 @@ class _LecturerTakeAttendancePageState
     try {
       final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
       if (pickedFile != null) {
+        // Check if the file is a JPEG or JPG
+        final extension = p.extension(pickedFile.path).toLowerCase();
+        if (extension != '.jpeg' && extension != '.jpg') {
+          // Show an error message if the file is not a JPEG or JPG
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Please select a JPEG or JPG image.')),
+          );
+          return;
+        }
+
         setState(() {
           _imageFile = File(pickedFile.path);
           _identifiedStudents.clear(); // Clear the identified students list
+          _matchedUserIds.clear(); // Clear the matched user IDs set
         });
       }
     } catch (e) {
@@ -90,11 +102,6 @@ class _LecturerTakeAttendancePageState
     setState(() => _isProcessing = true);
 
     try {
-      if (!_imageFile!.path.endsWith('.jpg') &&
-          !_imageFile!.path.endsWith('.jpeg')) {
-        throw Exception('Please upload an image in JPEG format.');
-      }
-
       final Uint8List imageBytes = await _imageFile!.readAsBytes();
       final GoogleVisionImage visionImage =
           GoogleVisionImage.fromFile(_imageFile!);
@@ -112,24 +119,32 @@ class _LecturerTakeAttendancePageState
       }
 
       final img.Image originalImage = img.decodeImage(imageBytes)!;
-      List<List<double>> embeddingsList = [];
+      List<Map<String, dynamic>> matchedFaces = [];
 
       for (Face face in faces) {
-        final img.Image faceImage = img.copyCrop(
-          originalImage,
-          face.boundingBox.left.toInt(),
-          face.boundingBox.top.toInt(),
-          face.boundingBox.width.toInt(),
-          face.boundingBox.height.toInt(),
-        );
-        final embeddings = await _getEmbeddings(faceImage);
-        embeddingsList.add(embeddings);
+        // Apply histogram equalization before alignment
+        final img.Image equalizedImage =
+            _applyHistogramEqualization(originalImage);
+
+        final img.Image alignedFaceImage = _alignFace(equalizedImage, face);
+        final embeddings = await _getEmbeddings(alignedFaceImage);
+        final matchedFace = await _findBestMatch(embeddings);
+        if (matchedFace != null) {
+          matchedFaces.add(matchedFace);
+        }
       }
 
-      final matchedFacesCount =
-          await _identifyAndMarkAttendance(embeddingsList);
+      if (matchedFaces.isNotEmpty) {
+        for (var match in matchedFaces) {
+          // Only mark attendance if the user has not already been matched
+          if (!_matchedUserIds.contains(match['email'])) {
+            await _markAttendance(match['email']);
+            _identifiedStudents.add(
+                '${match['firstName']} ${match['lastName']} (ID: ${match['studentId']})');
+            _matchedUserIds.add(match['email']); // Add to matched user IDs set
+          }
+        }
 
-      if (matchedFacesCount > 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Attendance marked successfully!')),
         );
@@ -148,19 +163,78 @@ class _LecturerTakeAttendancePageState
     }
   }
 
-  Future<int> _identifyAndMarkAttendance(
-      List<List<double>> embeddingsList) async {
-    _identifiedStudents.clear();
+  img.Image _applyHistogramEqualization(img.Image image) {
+    // Create histogram
+    List<int> histogram = List.filled(256, 0);
+    for (int y = 0; y < image.height; y++) {
+      for (int x = 0; x < image.width; x++) {
+        int brightness = img.getRed(image.getPixel(x, y));
+        histogram[brightness]++;
+      }
+    }
+
+    // Create cumulative distribution function (CDF)
+    List<int> cdf = List.filled(256, 0);
+    cdf[0] = histogram[0];
+    for (int i = 1; i < 256; i++) {
+      cdf[i] = cdf[i - 1] + histogram[i];
+    }
+
+    // Normalize CDF
+    int minCDF = cdf.firstWhere((value) => value != 0);
+    for (int i = 0; i < 256; i++) {
+      cdf[i] = ((cdf[i] - minCDF) / (image.width * image.height - minCDF) * 255)
+          .round();
+    }
+
+    // Apply equalization
+    img.Image equalizedImage = img.Image.from(image);
+    for (int y = 0; y < equalizedImage.height; y++) {
+      for (int x = 0; x < equalizedImage.width; x++) {
+        int pixel = equalizedImage.getPixel(x, y);
+        int r = cdf[img.getRed(pixel)];
+        int g = cdf[img.getGreen(pixel)];
+        int b = cdf[img.getBlue(pixel)];
+        equalizedImage.setPixel(x, y, img.getColor(r, g, b));
+      }
+    }
+
+    return equalizedImage;
+  }
+
+  img.Image _alignFace(img.Image image, Face face) {
+    final leftEye = face.getLandmark(FaceLandmarkType.leftEye)!.position;
+    final rightEye = face.getLandmark(FaceLandmarkType.rightEye)!.position;
+    final dx = rightEye.dx - leftEye.dx;
+    final dy = rightEye.dy - leftEye.dy;
+    final angle = atan2(dy, dx);
+
+    img.Image alignedImage = img.copyRotate(image, -angle * 180 / pi);
+
+    final alignedFace = img.copyCrop(
+      alignedImage,
+      face.boundingBox.left.toInt(),
+      face.boundingBox.top.toInt(),
+      face.boundingBox.width.toInt(),
+      face.boundingBox.height.toInt(),
+    );
+
+    return alignedFace;
+  }
+
+  Future<Map<String, dynamic>?> _findBestMatch(List<double> embeddings) async {
     final usersSnapshot =
         await FirebaseFirestore.instance.collection('Users').get();
-    int matchedFacesCount = 0;
+    double maxSimilarity = -1.0;
+    Map<String, dynamic>? bestMatch;
+
+    embeddings = _normalizeEmbeddings(embeddings);
 
     for (var userDoc in usersSnapshot.docs) {
       final userData = userDoc.data();
       final storedEmbeddings = userData['embeddings'] as List<dynamic>?;
 
-      if (storedEmbeddings == null) {
-        print('No embeddings found for user: ${userDoc.id}');
+      if (storedEmbeddings == null || storedEmbeddings.isEmpty) {
         continue;
       }
 
@@ -168,22 +242,63 @@ class _LecturerTakeAttendancePageState
           .map((e) => e is double ? e : double.tryParse(e.toString()) ?? 0.0)
           .toList();
 
-      for (var newEmbeddings in embeddingsList) {
-        final similarity =
-            _calculateCosineSimilarity(convertedEmbeddings, newEmbeddings);
-        if (similarity > 0.7) {
-          // Adjust threshold for higher accuracy
-          final firstName = userData['firstName'] ?? 'Unknown';
-          final lastName = userData['lastName'] ?? 'Unknown';
-          _identifiedStudents.add('$firstName $lastName');
-          await _markAttendance(userDoc.id);
-          matchedFacesCount++;
-          break;
-        }
+      final normalizedStoredEmbeddings =
+          _normalizeEmbeddings(convertedEmbeddings);
+
+      final similarity =
+          _calculateCosineSimilarity(normalizedStoredEmbeddings, embeddings);
+
+      if (similarity.isNaN || similarity.isInfinite) {
+        continue;
+      }
+
+      if (similarity > maxSimilarity) {
+        maxSimilarity = similarity;
+        bestMatch = userData;
       }
     }
-    setState(() {});
-    return matchedFacesCount;
+
+    if (maxSimilarity > 0.6) {
+      return bestMatch;
+    }
+
+    return null;
+  }
+
+  List<double> _normalizeEmbeddings(List<double> embeddings) {
+    double norm = 0.0;
+    for (var value in embeddings) {
+      norm += value * value;
+    }
+    norm = sqrt(norm);
+
+    if (norm == 0.0) {
+      return embeddings;
+    }
+
+    return embeddings.map((e) => e / norm).toList();
+  }
+
+  double _calculateCosineSimilarity(
+      List<double> vectorA, List<double> vectorB) {
+    double dotProduct = 0.0;
+    double magnitudeA = 0.0;
+    double magnitudeB = 0.0;
+
+    for (int i = 0; i < vectorA.length; i++) {
+      dotProduct += vectorA[i] * vectorB[i];
+      magnitudeA += vectorA[i] * vectorA[i];
+      magnitudeB += vectorB[i] * vectorB[i];
+    }
+
+    magnitudeA = sqrt(magnitudeA);
+    magnitudeB = sqrt(magnitudeB);
+
+    if (magnitudeA != 0.0 && magnitudeB != 0.0) {
+      return dotProduct / (magnitudeA * magnitudeB);
+    } else {
+      return double.nan;
+    }
   }
 
   Future<void> _markAttendance(String email) async {
@@ -214,42 +329,17 @@ class _LecturerTakeAttendancePageState
     }
   }
 
-  double _calculateCosineSimilarity(
-      List<double> vectorA, List<double> vectorB) {
-    double dotProduct = 0.0;
-    double magnitudeA = 0.0;
-    double magnitudeB = 0.0;
-
-    for (int i = 0; i < vectorA.length; i++) {
-      dotProduct += vectorA[i] * vectorB[i];
-      magnitudeA += vectorA[i] * vectorA[i];
-      magnitudeB += vectorB[i] * vectorB[i];
-    }
-
-    magnitudeA = sqrt(magnitudeA);
-    magnitudeB = sqrt(magnitudeB);
-
-    if (magnitudeA != 0.0 && magnitudeB != 0.0) {
-      return dotProduct / (magnitudeA * magnitudeB);
-    } else {
-      return 0.0;
-    }
-  }
-
   Future<List<double>> _getEmbeddings(img.Image faceImage) async {
     print('Getting embeddings...');
-    // Resize and normalize the face image
     final img.Image resizedImage =
         img.copyResize(faceImage, width: 112, height: 112);
     final List input = _imageToByteListFloat32(resizedImage, 112, 128, 128);
 
-    // Define input and output tensors
     final output = List.filled(1 * 192, 0).reshape([1, 192]);
 
-    // Run inference
     _interpreter.run(input, output);
 
-    return output[0];
+    return List<double>.from(output[0]);
   }
 
   List _imageToByteListFloat32(
@@ -258,9 +348,10 @@ class _LecturerTakeAttendancePageState
         Float32List(1 * inputSize * inputSize * 3);
     final buffer = Float32List.view(convertedBytes.buffer);
     int pixelIndex = 0;
+
     for (int i = 0; i < inputSize; i++) {
       for (int j = 0; j < inputSize; j++) {
-        final pixel = image.getPixel(j, i);
+        final int pixel = image.getPixelSafe(j, i);
         buffer[pixelIndex++] = (img.getRed(pixel) - mean) / std;
         buffer[pixelIndex++] = (img.getGreen(pixel) - mean) / std;
         buffer[pixelIndex++] = (img.getBlue(pixel) - mean) / std;

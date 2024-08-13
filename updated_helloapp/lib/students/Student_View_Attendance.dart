@@ -224,7 +224,7 @@ class _CourseAttendancePageState extends State<CourseAttendancePage> {
       User? user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No user signed in')),
+          const SnackBar(content: Text('No user signed in')),
         );
         return;
       }

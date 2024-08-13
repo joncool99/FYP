@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:camera/camera.dart';
-import 'package:helloapp/login.dart';
-import 'package:helloapp/students/Student_update_password.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'student_registerFace.dart';
 import 'Student_UpdateInfo.dart';
+import 'Student_update_password.dart';
+import '../login.dart';
 
 class ViewProfilePage extends StatefulWidget {
   @override
@@ -83,12 +83,46 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
     }
   }
 
+  Future<void> _showRegisterFaceAlert() async {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Registration Reminder"),
+          content: Text("Face can only be registered once."),
+          actions: [
+            TextButton(
+              child: Text("OK"),
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Navigate to face registration page after dismissing the alert
+                if (firstCamera != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          StudentRegisterFacePage(camera: firstCamera!),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('No camera available.')),
+                  );
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _navigateToUpdateInfoPage() async {
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => UpdateInfoPage(userData: _userData)),
+      MaterialPageRoute(
+          builder: (context) => UpdateInfoPage(userData: _userData)),
     );
-    // Refresh user data after returning from the update info page
     _fetchUserData();
   }
 
@@ -201,29 +235,19 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
                           ),
                     const SizedBox(height: 20),
                     ElevatedButton(
-                      onPressed: firstCamera != null
-                          ? () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => StudentRegisterFacePage(
-                                      camera: firstCamera!),
-                                ),
-                              );
-                            }
-                          : null,
+                      onPressed: () => _showRegisterFaceAlert(),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color.fromRGBO(22, 22, 151, 100),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
                         minimumSize: Size(160, 50),
                       ),
-                      child:
-                          const Text('Register Face', style: TextStyle(fontSize: 18)),
+                      child: const Text('Register Face',
+                          style: TextStyle(fontSize: 18)),
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(
@@ -238,8 +262,8 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
                             horizontal: 20, vertical: 12),
                         minimumSize: Size(160, 50),
                       ),
-                      child:
-                      const Text('Update Info', style: TextStyle(fontSize: 18)),
+                      child: const Text('Update Info',
+                          style: TextStyle(fontSize: 18)),
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(
@@ -258,12 +282,12 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
                         minimumSize: Size(160, 50),
                       ),
-                      child:
-                         const Text('Change Password', style: TextStyle(fontSize: 18)),
+                      child: const Text('Change Password',
+                          style: TextStyle(fontSize: 18)),
                     ),
 
                     // sign out button
@@ -282,8 +306,9 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
                         Future.delayed(Duration(seconds: 2), () {
                           Navigator.pushAndRemoveUntil(
                             context,
-                            MaterialPageRoute(builder: (context) => LoginPage()),
-                                (route) => false,
+                            MaterialPageRoute(
+                                builder: (context) => LoginPage()),
+                            (route) => false,
                           );
                         });
                       },

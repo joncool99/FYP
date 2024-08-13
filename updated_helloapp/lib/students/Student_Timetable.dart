@@ -99,7 +99,7 @@ class _ViewTimetableState extends State<ViewTimetable> {
         backgroundColor: Colors.white,
         elevation: 0,
         bottom: PreferredSize(
-          preferredSize: Size.fromHeight(4.0),
+          preferredSize: const Size.fromHeight(4.0),
           child: Container(
             color: Colors.blue[800],
             height: 3.0,
