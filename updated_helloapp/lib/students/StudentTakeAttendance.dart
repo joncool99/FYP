@@ -12,10 +12,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
 import 'package:geolocator/geolocator.dart';
 
+//const double allowedLatitude = 1.3760; // testing location
+//const double allowedLongitude = 103.9588; // testing location
 
-
-const double allowedLatitude = 1.3294548283975756; // Replace with actual latitude
-const double allowedLongitude = 103.77618522345148; // Replace with actual longitude
+const double allowedLatitude = 1.3294548283975756; // Sim location
+const double allowedLongitude = 103.77618522345148; // Sim location
 const double allowedRadius = 300; // in meters
 
 class StudentTakeAttendancePage extends StatefulWidget {
@@ -376,7 +377,9 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
             const Center(child: CircularProgressIndicator())
           else
             Expanded(
+              child:Center(
               child: CameraPreview(_controller),
+            ),
             ),
           Padding(
             padding: const EdgeInsets.all(16.0),
