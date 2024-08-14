@@ -10,6 +10,13 @@ import 'package:path/path.dart' as path;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
+import 'package:geolocator/geolocator.dart';
+
+
+
+const double allowedLatitude = 1.3294548283975756; // Replace with actual latitude
+const double allowedLongitude = 103.77618522345148; // Replace with actual longitude
+const double allowedRadius = 300; // in meters
 
 class StudentTakeAttendancePage extends StatefulWidget {
   final String courseId;
@@ -100,6 +107,43 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
       );
     }
   }
+  Future<Position> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Check if location services are enabled
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location services are disabled.');
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('Location permissions are denied.');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error('Location permissions are permanently denied.');
+    }
+
+    // Get the current position
+    return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+  }
+
+  bool _isWithinAllowedArea(Position currentPosition) {
+    double distanceInMeters = Geolocator.distanceBetween(
+      allowedLatitude,
+      allowedLongitude,
+      currentPosition.latitude,
+      currentPosition.longitude,
+    );
+
+    return distanceInMeters <= allowedRadius;
+  }
+
 
   Future<void> _captureAndVerifyFace() async {
     if (!_controller.value.isInitialized || !_isModelLoaded || _isProcessing) {
@@ -111,7 +155,17 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
     setState(() => _isProcessing = true);
 
     try {
-      // Capture and verify face logic remains the same
+      // **Location Check**
+      Position currentPosition = await _getCurrentLocation();
+      if (!_isWithinAllowedArea(currentPosition)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You are outside the allowed area for attendance.')),
+        );
+        setState(() => _isProcessing = false);
+        return;
+      }
+
+      // **Capture and verify face logic remains the same**
       List<List<double>> newEmbeddingsList = [];
       for (int i = 0; i < 3; i++) {
         // Capture 3 images for better accuracy
@@ -123,7 +177,7 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
         // Detect faces using Google ML Vision
         print('Detecting faces...');
         final GoogleVisionImage visionImage =
-            GoogleVisionImage.fromFilePath(imageFile.path);
+        GoogleVisionImage.fromFilePath(imageFile.path);
         final FaceDetector faceDetector = GoogleVision.instance.faceDetector(
           const FaceDetectorOptions(enableLandmarks: true),
         );
@@ -156,7 +210,7 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
 
       // Calculate average embeddings for verification
       final averageNewEmbeddings =
-          _calculateAverageEmbeddings(newEmbeddingsList);
+      _calculateAverageEmbeddings(newEmbeddingsList);
 
       // Verify embeddings with stored embeddings
       final isVerified = await _verifyFace(averageNewEmbeddings);
