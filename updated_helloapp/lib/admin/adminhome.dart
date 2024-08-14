@@ -27,7 +27,12 @@ class AdminhomePage extends StatelessWidget {
             height: 4.0,
           ),
         ),
-
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => _logout(context),
+          ),
+        ],
       ),
       body: Center(
         child: Row(
