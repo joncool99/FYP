@@ -14,7 +14,7 @@ import 'package:geolocator/geolocator.dart';
 
 
 
-const double allowedLatitude = 1.3294548283976; // Replace with actual latitude
+const double allowedLatitude = 1.3294548283975756; // Replace with actual latitude
 const double allowedLongitude = 103.77618522345148; // Replace with actual longitude
 const double allowedRadius = 100; // in meters
 
