@@ -234,6 +234,7 @@ class _LiveFaceRecognitionPageState extends State<LiveFaceRecognitionPage> {
 
     return similarity;
   }
+
   List<double> _calculateAverageEmbeddings(List<List<double>> embeddingsList) {
     final int length = embeddingsList.first.length;
     final List<double> averageEmbeddings = List.filled(length, 0.0);
@@ -302,14 +303,21 @@ class _LiveFaceRecognitionPageState extends State<LiveFaceRecognitionPage> {
           if (!_isCameraInitialized || !_isModelLoaded)
             Center(child: CircularProgressIndicator())
           else
-            CameraPreview(_controller),
+            Center(
+              child: Container(
+                width: double.infinity,
+                height: double.infinity,
+                alignment: Alignment.center,
+                child: CameraPreview(_controller),
+              ),
+            ),
           if (_showIdentifyingMessage)
             Align(
               alignment: Alignment.center,
               child: Container(
                 color: Colors.black54,
                 padding: const EdgeInsets.all(16.0),
-                child: Text(
+                child: const Text(
                   'Identifying, please look in the camera...',
                   style: TextStyle(color: Colors.white, fontSize: 18),
                 ),
@@ -323,7 +331,7 @@ class _LiveFaceRecognitionPageState extends State<LiveFaceRecognitionPage> {
                 onPressed: _isProcessing || !_isModelLoaded
                     ? null
                     : _captureAndVerifyFace,
-                child: Icon(Icons.camera),
+                child: const Icon(Icons.camera),
               ),
             ),
           ),
@@ -334,10 +342,11 @@ class _LiveFaceRecognitionPageState extends State<LiveFaceRecognitionPage> {
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    Text('Identified Students:',
+                    const Text('Identified Students:',
                         style: TextStyle(color: Colors.white, fontSize: 18)),
-                    ..._identifiedStudents.map((name) =>
-                        Text(name, style: TextStyle(color: Colors.white))),
+                    ..._identifiedStudents.map((name) => Text(name,
+                        style: const TextStyle(
+                            color: Color.fromARGB(255, 254, 255, 254)))),
                   ],
                 ),
               ),
