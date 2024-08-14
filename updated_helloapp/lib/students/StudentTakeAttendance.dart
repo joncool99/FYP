@@ -10,6 +10,13 @@ import 'package:path/path.dart' as path;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
+import 'package:geolocator/geolocator.dart';
+
+
+
+const double allowedLatitude = 1.3294548283975756; // Replace with actual latitude
+const double allowedLongitude = 103.77618522345148; // Replace with actual longitude
+const double allowedRadius = 100; // in meters
 
 class StudentTakeAttendancePage extends StatefulWidget {
   final String courseId;
@@ -100,7 +107,123 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
       );
     }
   }
+  Future<Position> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
 
+    // Check if location services are enabled
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location services are disabled.');
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('Location permissions are denied.');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error('Location permissions are permanently denied.');
+    }
+
+    // Get the current position
+    return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+  }
+
+  bool _isWithinAllowedArea(Position currentPosition) {
+    double distanceInMeters = Geolocator.distanceBetween(
+      allowedLatitude,
+      allowedLongitude,
+      currentPosition.latitude,
+      currentPosition.longitude,
+    );
+
+    return distanceInMeters <= allowedRadius;
+  }
+
+  // Future<void> _captureAndVerifyFace() async {
+  //   if (!_controller.value.isInitialized || !_isModelLoaded || _isProcessing) {
+  //     print(
+  //         'Button disabled. _isProcessing: $_isProcessing, _isModelLoaded: $_isModelLoaded, _controller initialized: ${_controller.value.isInitialized}');
+  //     return;
+  //   }
+  //
+  //   setState(() => _isProcessing = true);
+  //
+  //   try {
+  //     // Capture and verify face logic remains the same
+  //     List<List<double>> newEmbeddingsList = [];
+  //     for (int i = 0; i < 3; i++) {
+  //       // Capture 3 images for better accuracy
+  //       print('Capturing image...');
+  //       final XFile imageFile = await _controller.takePicture();
+  //       print('Picture taken: ${imageFile.path}');
+  //       final Uint8List imageBytes = await imageFile.readAsBytes();
+  //
+  //       // Detect faces using Google ML Vision
+  //       print('Detecting faces...');
+  //       final GoogleVisionImage visionImage =
+  //           GoogleVisionImage.fromFilePath(imageFile.path);
+  //       final FaceDetector faceDetector = GoogleVision.instance.faceDetector(
+  //         const FaceDetectorOptions(enableLandmarks: true),
+  //       );
+  //       final List<Face> faces = await faceDetector.processImage(visionImage);
+  //
+  //       if (faces.isEmpty) {
+  //         ScaffoldMessenger.of(context).showSnackBar(
+  //           SnackBar(content: Text('No face detected! Please try again.')),
+  //         );
+  //         setState(() => _isProcessing = false);
+  //         return;
+  //       }
+  //
+  //       // Extract the first detected face and get embeddings
+  //       print('Extracting face and getting embeddings...');
+  //       final Face face = faces[0];
+  //       final img.Image originalImage = img.decodeImage(imageBytes)!;
+  //       final img.Image faceImage = img.copyCrop(
+  //         originalImage,
+  //         face.boundingBox.left.toInt(),
+  //         face.boundingBox.top.toInt(),
+  //         face.boundingBox.width.toInt(),
+  //         face.boundingBox.height.toInt(),
+  //       );
+  //       final newEmbeddings = await _getEmbeddings(faceImage);
+  //       newEmbeddingsList.add(newEmbeddings);
+  //
+  //       await Future.delayed(const Duration(seconds: 1)); // Delay between captures
+  //     }
+  //
+  //     // Calculate average embeddings for verification
+  //     final averageNewEmbeddings =
+  //         _calculateAverageEmbeddings(newEmbeddingsList);
+  //
+  //     // Verify embeddings with stored embeddings
+  //     final isVerified = await _verifyFace(averageNewEmbeddings);
+  //
+  //     if (isVerified) {
+  //       // Mark attendance
+  //       await _markAttendance();
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(content: Text('Attendance marked successfully!')),
+  //       );
+  //     } else {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(content: Text('Face not recognized. Please try again.')),
+  //       );
+  //     }
+  //   } catch (e) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text('Error during face verification: $e')),
+  //     );
+  //     print('Error during face verification: $e');
+  //   } finally {
+  //     setState(() => _isProcessing = false);
+  //   }
+  // }
   Future<void> _captureAndVerifyFace() async {
     if (!_controller.value.isInitialized || !_isModelLoaded || _isProcessing) {
       print(
@@ -111,7 +234,17 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
     setState(() => _isProcessing = true);
 
     try {
-      // Capture and verify face logic remains the same
+      // **Location Check**
+      Position currentPosition = await _getCurrentLocation();
+      if (!_isWithinAllowedArea(currentPosition)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You are outside the allowed area for attendance.')),
+        );
+        setState(() => _isProcessing = false);
+        return;
+      }
+
+      // **Capture and verify face logic remains the same**
       List<List<double>> newEmbeddingsList = [];
       for (int i = 0; i < 3; i++) {
         // Capture 3 images for better accuracy
@@ -123,7 +256,7 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
         // Detect faces using Google ML Vision
         print('Detecting faces...');
         final GoogleVisionImage visionImage =
-            GoogleVisionImage.fromFilePath(imageFile.path);
+        GoogleVisionImage.fromFilePath(imageFile.path);
         final FaceDetector faceDetector = GoogleVision.instance.faceDetector(
           const FaceDetectorOptions(enableLandmarks: true),
         );
@@ -156,7 +289,7 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
 
       // Calculate average embeddings for verification
       final averageNewEmbeddings =
-          _calculateAverageEmbeddings(newEmbeddingsList);
+      _calculateAverageEmbeddings(newEmbeddingsList);
 
       // Verify embeddings with stored embeddings
       final isVerified = await _verifyFace(averageNewEmbeddings);
