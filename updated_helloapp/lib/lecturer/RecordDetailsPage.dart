@@ -25,7 +25,8 @@ class _LecturerRecordsPageState extends State<LecturerRecordsPage> {
       var data = doc.data() as Map<String, dynamic>;
       return CourseDetail(
         courseId: data['courseId'] ?? 'N/A', // Default value if null
-        courseName: data['courseName'] ?? 'Unknown Course', // Default value if null
+        courseName:
+            data['courseName'] ?? 'Unknown Course', // Default value if null
       );
     }).toList();
 
@@ -40,8 +41,10 @@ class _LecturerRecordsPageState extends State<LecturerRecordsPage> {
         var data = doc.data() as Map<String, dynamic>;
         return LessonDetail(
           lessonId: doc.id,
-          lessonName: data['lessonName'] ?? 'Unknown Lesson', // Default value if null
-          lessonDate: (data['date'] as Timestamp).toDate(), // Assuming date is stored as Timestamp
+          lessonName:
+              data['lessonName'] ?? 'Unknown Lesson', // Default value if null
+          lessonDate: (data['date'] as Timestamp)
+              .toDate(), // Assuming date is stored as Timestamp
         );
       }).toList();
 
@@ -53,7 +56,8 @@ class _LecturerRecordsPageState extends State<LecturerRecordsPage> {
     });
   }
 
-  void _navigateToRecordsDetail(BuildContext context, String courseId, String courseName, String lessonId) {
+  void _navigateToRecordsDetail(BuildContext context, String courseId,
+      String courseName, String lessonId) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -108,7 +112,8 @@ class CourseCard extends StatelessWidget {
   final CourseDetail course;
   final Function(LessonDetail) onLessonTap;
 
-  const CourseCard({Key? key, required this.course, required this.onLessonTap}) : super(key: key);
+  const CourseCard({Key? key, required this.course, required this.onLessonTap})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -121,7 +126,8 @@ class CourseCard extends StatelessWidget {
         ),
         children: course.lessons.map((lesson) {
           return ListTile(
-            title: Text('${lesson.lessonName} (${DateFormat('yyyy-MM-dd').format(lesson.lessonDate)})'),
+            title: Text(
+                '${lesson.lessonName} (${DateFormat('yyyy-MM-dd').format(lesson.lessonDate)})'),
             onTap: () => onLessonTap(lesson),
           );
         }).toList(),
@@ -233,24 +239,23 @@ class _RecordsDetailState extends State<RecordsDetail> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-            centerTitle: true,
-            title: const Text('Attendance',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 23)),
-            bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(9.0),
-                child: Container(
-                  color: const Color.fromRGBO(22, 22, 151, 100),
-                  height: 5.0,
-                ))),
+          centerTitle: true,
+          title: const Text('Attendance'),
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(4.0),
+            child: Container(
+              color: Colors.blue[800],
+              height: 3.0,
+            ),
+          ),
+        ),
         body: Padding(
             padding: const EdgeInsets.fromLTRB(30.0, 40.0, 30.0, 0),
             child: Column(children: <Widget>[
-              const Text('Attendance',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
               const SizedBox(height: 20),
               Text(
                 'Overall Attendance: ${attendancePercentage.toStringAsFixed(2)}%',
-                style: TextStyle(
+                style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 20,
                     color: Colors.blueAccent),
@@ -276,9 +281,9 @@ class _RecordsDetailState extends State<RecordsDetail> {
                                   padding: const EdgeInsets.all(12.0),
                                   child: Row(children: <Widget>[
                                     Text(detail.index.toString()),
-              
                                     const SizedBox(width: 20),
-                                    Text('${detail.firstName} ${detail.lastName}'),
+                                    Text(
+                                        '${detail.firstName} ${detail.lastName}'),
                                     const SizedBox(width: 20),
                                     Text(detail.studentId),
                                     const Expanded(child: SizedBox()),
@@ -305,5 +310,5 @@ class AttendanceDetail {
     required this.firstName,
     required this.lastName,
     required this.attendance,
-  }); 
+  });
 }

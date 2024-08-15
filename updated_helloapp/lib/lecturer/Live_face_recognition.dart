@@ -296,12 +296,22 @@ class _LiveFaceRecognitionPageState extends State<LiveFaceRecognitionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Live Face Recognition'),
+        centerTitle: true,
+        title: const Text('Live Face Recognition'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(3.0),
+          child: Container(
+            color: Colors.blue[800],
+            height: 3.0,
+          ),
+        ),
+        automaticallyImplyLeading: false,
       ),
+      
       body: Stack(
         children: [
           if (!_isCameraInitialized || !_isModelLoaded)
-            Center(child: CircularProgressIndicator())
+            const Center(child: CircularProgressIndicator())
           else
             Center(
               child: Container(
