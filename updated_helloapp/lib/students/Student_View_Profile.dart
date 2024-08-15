@@ -88,11 +88,11 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text("Registration Reminder"),
-          content: Text("Face can only be registered once."),
+          title: const Text("Registration Reminder"),
+          content: const Text("Face can only be registered once."),
           actions: [
             TextButton(
-              child: Text("OK"),
+              child: const Text("OK"),
               onPressed: () {
                 Navigator.of(context).pop();
                 // Navigate to face registration page after dismissing the alert
@@ -130,6 +130,7 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        centerTitle: true,
         title: const Text(
           'View Profile',
           style: TextStyle(color: Colors.black),
@@ -196,9 +197,9 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
                     const SizedBox(height: 20),
                     Divider(color: Colors.blue[900]),
                     const SizedBox(height: 20),
-                    Text(
+                    const Text(
                       'Enrolled Courses',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -213,7 +214,7 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
                           )
                         : ListView.builder(
                             shrinkWrap: true,
-                            physics: NeverScrollableScrollPhysics(),
+                            physics: const NeverScrollableScrollPhysics(),
                             itemCount: enrolledCourses.length,
                             itemBuilder: (context, index) {
                               var course = enrolledCourses[index];
@@ -244,7 +245,7 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
                         ),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 20, vertical: 12),
-                        minimumSize: Size(160, 50),
+                        minimumSize: const Size(160, 50),
                       ),
                       child: const Text('Register Face',
                           style: TextStyle(fontSize: 18)),
@@ -260,7 +261,7 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
                         ),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 20, vertical: 12),
-                        minimumSize: Size(160, 50),
+                        minimumSize: const Size(160, 50),
                       ),
                       child: const Text('Update Info',
                           style: TextStyle(fontSize: 18)),
@@ -284,7 +285,7 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
                         ),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 20, vertical: 12),
-                        minimumSize: Size(160, 50),
+                        minimumSize: const Size(160, 50),
                       ),
                       child: const Text('Change Password',
                           style: TextStyle(fontSize: 18)),
@@ -296,23 +297,22 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
                       onPressed: () {
                         _auth.signOut();
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
+                          const SnackBar(
                             content: Text('Successfully logged out.'),
                             duration: Duration(seconds: 2),
                           ),
                         );
 
-                        // Navigate to LoginPage after a short delay to ensure the snack bar is visible
-                        Future.delayed(Duration(seconds: 2), () {
+                        
+                        Future.delayed(const Duration(seconds: 1), () {
                           Navigator.pushAndRemoveUntil(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => LoginPage()),
+                                builder: (context) => const LoginPage()),
                             (route) => false,
                           );
                         });
                       },
-                      child: Text('Sign Out', style: TextStyle(fontSize: 18)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
                         foregroundColor: Colors.white,
@@ -320,9 +320,10 @@ class _ViewProfilePageState extends State<ViewProfilePage> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         padding:
-                            EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                         minimumSize: Size(160, 50),
                       ),
+                      child: const Text('Sign Out', style: TextStyle(fontSize: 18)),
                     ),
                   ],
                 ),

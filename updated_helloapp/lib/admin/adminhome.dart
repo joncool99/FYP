@@ -23,11 +23,18 @@ class AdminhomePage extends StatelessWidget {
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(8.0),
           child: Container(
-            color: Colors.blue, // Change the color as needed
+            color: const Color.fromRGBO(
+                33, 150, 243, 1), // Change the color as needed
             height: 4.0,
           ),
         ),
-
+        automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => _logout(context),
+          ),
+        ],
       ),
       body: Center(
         child: Row(
@@ -70,7 +77,8 @@ class AdminhomePage extends StatelessWidget {
                     //go student page
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const TimetableHome()),
+                      MaterialPageRoute(
+                          builder: (context) => const TimetableHome()),
                     );
                   },
                   style: ElevatedButton.styleFrom(
@@ -98,12 +106,11 @@ class AdminhomePage extends StatelessWidget {
                   onPressed: () {
                     //go student page
                     Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const AdminRecordPage()),
-              );
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const AdminRecordPage()),
+                    );
                   },
-              
-    
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.all(40),
                     backgroundColor: const Color.fromARGB(255, 172, 177, 179),

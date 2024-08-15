@@ -370,7 +370,7 @@ class _LecturerTakeAttendancePageState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Lecturer Take Attendance'),
+        title: const Text('Lecturer Take Attendance'),
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -387,9 +387,9 @@ class _LecturerTakeAttendancePageState
                 ),
                 child: _imageFile != null
                     ? Image.file(_imageFile!)
-                    : Center(child: Text('Upload Class photo')),
+                    : const Center(child: Text('Upload Class photo')),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -398,7 +398,7 @@ class _LecturerTakeAttendancePageState
                     child: ElevatedButton(
                       onPressed:
                           _isProcessing || !_isModelLoaded ? null : _pickImage,
-                      child: Text('Pick Image'),
+                      child: const Text('Pick Image'),
                     ),
                   ),
                   Padding(

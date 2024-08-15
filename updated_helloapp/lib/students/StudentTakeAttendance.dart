@@ -1,13 +1,18 @@
 import 'dart:typed_data';
-import 'dart:math';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_ml_vision/google_ml_vision.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:image/image.dart' as img;
-import 'package:geolocator/geolocator.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:math';
+import 'package:geolocator/geolocator.dart';
+
+
 
 const double allowedLatitude = 1.3294548283975756; // Replace with actual latitude
 const double allowedLongitude = 103.77618522345148; // Replace with actual longitude
@@ -36,7 +41,6 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
   late Interpreter _interpreter;
   bool _isModelLoaded = false;
   bool _isCameraInitialized = false;
-  bool _isFaceInFrame = false;
 
   @override
   void initState() {
@@ -103,7 +107,6 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
       );
     }
   }
-
   Future<Position> _getCurrentLocation() async {
     bool serviceEnabled;
     LocationPermission permission;
@@ -140,6 +143,7 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
 
     return distanceInMeters <= allowedRadius;
   }
+
 
   Future<void> _captureAndVerifyFace() async {
     if (!_controller.value.isInitialized || !_isModelLoaded || _isProcessing) {
@@ -201,9 +205,6 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
         final newEmbeddings = await _getEmbeddings(faceImage);
         newEmbeddingsList.add(newEmbeddings);
 
-        // Determine if the detected face is within the oval frame.
-        _isFaceInFrame = _isFaceWithinFrame(face.boundingBox);
-
         await Future.delayed(const Duration(seconds: 1)); // Delay between captures
       }
 
@@ -235,20 +236,6 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
     }
   }
 
-  bool _isFaceWithinFrame(Rect faceRect) {
-    // Define the frame's dimensions and position.
-    // This example assumes the frame is centered and occupies 70% of the screen width and 50% of the screen height.
-    final double frameWidth = MediaQuery.of(context).size.width * 0.7;
-    final double frameHeight = MediaQuery.of(context).size.height * 0.5;
-    final double frameLeft = (MediaQuery.of(context).size.width - frameWidth) / 2;
-    final double frameTop = (MediaQuery.of(context).size.height - frameHeight) / 2;
-
-    final Rect frameRect = Rect.fromLTWH(frameLeft, frameTop, frameWidth, frameHeight);
-
-    // Check if the face is within the oval frame.
-    return frameRect.contains(faceRect.center);
-  }
-
   Future<void> _markAttendance() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -278,86 +265,95 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       final doc = await FirebaseFirestore.instance
-          .collection('UserEmbeddings')
+          .collection('Users')
           .doc(user.email)
           .get();
-
       if (doc.exists) {
-        final storedEmbeddings = List<double>.from(doc['embeddings']);
-        final double similarity = _calculateCosineSimilarity(
-          newEmbeddings,
-          storedEmbeddings,
-        );
+        final storedEmbeddings = List<double>.from(doc.data()!['embeddings']);
+        final similarity =
+            _calculateCosineSimilarity(storedEmbeddings, newEmbeddings);
 
-        // Print similarity score
-        print('Cosine similarity: $similarity');
-
-        // Consider face verification successful if similarity is above a threshold
-        return similarity > 0.9;
+        // Define a threshold for matching faces
+        const double threshold = 0.7; // Adjust this value for higher accuracy
+        return similarity > threshold;
       }
     }
     return false;
   }
 
-  Future<List<double>> _getEmbeddings(img.Image faceImage) async {
-    final List<double> input = _preprocessImage(faceImage);
+  double _calculateCosineSimilarity(
+      List<double> vectorA, List<double> vectorB) {
+    double dotProduct = 0.0;
+    double magnitudeA = 0.0;
+    double magnitudeB = 0.0;
 
-    final output = List.filled(192, 0.0).reshape([1, 192]);
+    for (int i = 0; i < vectorA.length; i++) {
+      dotProduct += vectorA[i] * vectorB[i];
+      magnitudeA += vectorA[i] * vectorA[i];
+      magnitudeB += vectorB[i] * vectorB[i];
+    }
+
+    magnitudeA = sqrt(magnitudeA);
+    magnitudeB = sqrt(magnitudeB);
+
+    if (magnitudeA != 0.0 && magnitudeB != 0.0) {
+      return dotProduct / (magnitudeA * magnitudeB);
+    } else {
+      return 0.0;
+    }
+  }
+
+  List<double> _calculateAverageEmbeddings(List<List<double>> embeddingsList) {
+    final int length = embeddingsList.first.length;
+    final List<double> averageEmbeddings = List.filled(length, 0.0);
+
+    for (List<double> embeddings in embeddingsList) {
+      for (int i = 0; i < length; i++) {
+        averageEmbeddings[i] += embeddings[i];
+      }
+    }
+
+    for (int i = 0; i < length; i++) {
+      averageEmbeddings[i] /= embeddingsList.length;
+    }
+
+    return averageEmbeddings;
+  }
+
+  Future<List<double>> _getEmbeddings(img.Image faceImage) async {
+    print('Getting embeddings...');
+    // Resize and normalize the face image
+    final img.Image resizedImage =
+        img.copyResize(faceImage, width: 112, height: 112);
+    final List input = _imageToByteListFloat32(resizedImage, 112, 128, 128);
+
+    // Define input and output tensors
+    final output = List.filled(1 * 192, 0).reshape([1, 192]);
+
+    // Run inference
     _interpreter.run(input, output);
 
     return output[0];
   }
 
-  List<double> _preprocessImage(img.Image faceImage) {
-    final resizedImage = img.copyResize(faceImage, width: 112, height: 112);
-    final Float32List imageAsList = Float32List(112 * 112 * 3);
-
-    for (int i = 0; i < 112; i++) {
-      for (int j = 0; j < 112; j++) {
-        final pixel = resizedImage.getPixel(j, i);
-        final int index = (i * 112 + j) * 3;
-
-        imageAsList[index] = (img.getRed(pixel) - 128) / 128;
-        imageAsList[index + 1] = (img.getGreen(pixel) - 128) / 128;
-        imageAsList[index + 2] = (img.getBlue(pixel) - 128) / 128;
+  List _imageToByteListFloat32(
+      img.Image image, int inputSize, double mean, double std) {
+    final Float32List convertedBytes =
+        Float32List(1 * inputSize * inputSize * 3);
+    final buffer = Float32List.view(convertedBytes.buffer);
+    int pixelIndex = 0;
+    for (int i = 0; i < inputSize; i++) {
+      for (int j = 0; j < inputSize; j++) {
+        final int pixel = image.getPixel(j, i);
+        final int r = img.getRed(pixel); // Extract red value
+        final int g = img.getGreen(pixel); // Extract green value
+        final int b = img.getBlue(pixel); // Extract blue value
+        buffer[pixelIndex++] = (r - mean) / std;
+        buffer[pixelIndex++] = (g - mean) / std;
+        buffer[pixelIndex++] = (b - mean) / std;
       }
     }
-
-    return imageAsList;
-  }
-
-  double _calculateCosineSimilarity(
-      List<double> embeddings1,
-      List<double> embeddings2,
-      ) {
-    double dotProduct = 0.0;
-    double norm1 = 0.0;
-    double norm2 = 0.0;
-
-    for (int i = 0; i < embeddings1.length; i++) {
-      dotProduct += embeddings1[i] * embeddings2[i];
-      norm1 += embeddings1[i] * embeddings1[i];
-      norm2 += embeddings2[i] * embeddings2[i];
-    }
-
-    norm1 = sqrt(norm1);
-    norm2 = sqrt(norm2);
-
-    return dotProduct / (norm1 * norm2);
-  }
-
-  List<double> _calculateAverageEmbeddings(List<List<double>> embeddingsList) {
-    final int length = embeddingsList[0].length;
-    final List<double> averageEmbeddings = List.filled(length, 0.0);
-
-    for (int i = 0; i < length; i++) {
-      for (final embeddings in embeddingsList) {
-        averageEmbeddings[i] += embeddings[i];
-      }
-      averageEmbeddings[i] /= embeddingsList.length;
-    }
-
-    return averageEmbeddings;
+    return convertedBytes.buffer.asUint8List();
   }
 
   @override
@@ -373,21 +369,17 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
       appBar: AppBar(
         title: const Text('Take Attendance'),
       ),
-      body: Stack(
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           if (!_isCameraInitialized || !_isModelLoaded)
             const Center(child: CircularProgressIndicator())
           else
-            CameraPreview(_controller),
-          if (_isCameraInitialized && _isModelLoaded)
-            CustomPaint(
-              painter: FaceFramePainter(_isFaceInFrame),
-              child: Container(),
+            Expanded(
+              child: CameraPreview(_controller),
             ),
-          Positioned(
-            bottom: 16.0,
-            left: 16.0,
-            right: 16.0,
+          Padding(
+            padding: const EdgeInsets.all(16.0),
             child: ElevatedButton(
               onPressed: _isProcessing || !_isModelLoaded
                   ? null
@@ -398,34 +390,5 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
         ],
       ),
     );
-  }
-}
-
-class FaceFramePainter extends CustomPainter {
-  final bool isFaceInFrame;
-
-  FaceFramePainter(this.isFaceInFrame);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..color = isFaceInFrame ? Colors.green : Colors.red
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4.0;
-
-    // Define the oval frame.
-    final Rect rect = Rect.fromCenter(
-      center: Offset(size.width / 2, size.height / 2),
-      width: size.width * 0.7,
-      height: size.height * 0.5,
-    );
-
-    // Draw the oval.
-    canvas.drawOval(rect, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return true;
   }
 }

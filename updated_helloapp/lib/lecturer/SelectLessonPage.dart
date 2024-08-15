@@ -63,13 +63,13 @@ class _SelectLessonPageState extends State<SelectLessonPage> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: Text('Select Lesson for ${widget.courseName}',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 23)),
+        title: Text('Select Lesson for ${widget.courseName}'),
+            
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(9.0),
+          preferredSize: const Size.fromHeight(4.0),
           child: Container(
-            color: const Color.fromRGBO(22, 22, 151, 100),
-            height: 5.0,
+            color: Colors.blue[800],
+            height: 3.0,
           ),
         ),
       ),

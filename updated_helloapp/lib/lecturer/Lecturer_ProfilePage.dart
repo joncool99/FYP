@@ -53,7 +53,8 @@ class _LecturerProfilePageState extends State<LecturerProfilePage> {
   Future<void> _navigateToUpdateInfoPage() async {
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => UpdateInfoPage(userData: _userData)),
+      MaterialPageRoute(
+          builder: (context) => UpdateInfoPage(userData: _userData)),
     );
     // Refresh user data after returning from the update info page
     _fetchUserData();
@@ -63,6 +64,7 @@ class _LecturerProfilePageState extends State<LecturerProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        centerTitle: true,
         title: const Text(
           'View Profile',
           style: TextStyle(color: Colors.black),
@@ -146,7 +148,7 @@ class _LecturerProfilePageState extends State<LecturerProfilePage> {
                           )
                         : ListView.builder(
                             shrinkWrap: true,
-                            physics: NeverScrollableScrollPhysics(),
+                            physics: const NeverScrollableScrollPhysics(),
                             itemCount: teachingCourses.length,
                             itemBuilder: (context, index) {
                               var course = teachingCourses[index];
@@ -170,33 +172,36 @@ class _LecturerProfilePageState extends State<LecturerProfilePage> {
                     ElevatedButton(
                       onPressed: _navigateToUpdateInfoPage,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                        backgroundColor: const Color.fromRGBO(22, 22, 151, 100),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
                         minimumSize: const Size(160, 50),
                       ),
-                      child: const Text('Update Info', style: TextStyle(fontSize: 18)),
+                      child: const Text('Update Info',
+                          style: TextStyle(fontSize: 18)),
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(
-                      onPressed: () async{
+                      onPressed: () async {
                         await _auth.signOut();
 
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
+                          const SnackBar(
                             content: Text('Successfully logged out.'),
-                            duration: Duration(seconds: 2),
+                            duration: Duration(seconds: 1),
                           ),
                         );
                         // Navigate to LoginPage after a short delay to ensure the snack bar is visible
-                        Future.delayed(Duration(seconds: 2), () {
+                        Future.delayed(const Duration(seconds: 1), () {
                           Navigator.pushAndRemoveUntil(
                             context,
-                            MaterialPageRoute(builder: (context) => const LoginPage()),
-                                (route) => false,
+                            MaterialPageRoute(
+                                builder: (context) => const LoginPage()),
+                            (route) => false,
                           );
                         });
                       },
@@ -206,11 +211,12 @@ class _LecturerProfilePageState extends State<LecturerProfilePage> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
                         minimumSize: const Size(160, 50),
                       ),
-                      child: const Text('Sign Out', style: TextStyle(fontSize: 18)),
+                      child: const Text('Sign Out',
+                          style: TextStyle(fontSize: 18)),
                     ),
                   ],
                 ),
