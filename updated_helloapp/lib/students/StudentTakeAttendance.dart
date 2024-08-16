@@ -12,8 +12,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
 import 'package:geolocator/geolocator.dart';
 
-//const double allowedLatitude = 1.3760; // testing location
-//const double allowedLongitude = 103.9588; // testing location
+//double allowedLatitude = 1.3760; // testing location
+//double allowedLongitude = 103.9588; // testing location
 
 const double allowedLatitude = 1.3294548283975756; // Sim location
 const double allowedLongitude = 103.77618522345148; // Sim location
@@ -108,6 +108,7 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
       );
     }
   }
+
   Future<Position> _getCurrentLocation() async {
     bool serviceEnabled;
     LocationPermission permission;
@@ -131,7 +132,8 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
     }
 
     // Get the current position
-    return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
   }
 
   bool _isWithinAllowedArea(Position currentPosition) {
@@ -144,7 +146,6 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
 
     return distanceInMeters <= allowedRadius;
   }
-
 
   Future<void> _captureAndVerifyFace() async {
     if (!_controller.value.isInitialized || !_isModelLoaded || _isProcessing) {
@@ -160,7 +161,9 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
       Position currentPosition = await _getCurrentLocation();
       if (!_isWithinAllowedArea(currentPosition)) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('You are outside the allowed area for attendance.')),
+          const SnackBar(
+              content:
+                  Text('You are outside the allowed area for attendance.')),
         );
         setState(() => _isProcessing = false);
         return;
@@ -178,7 +181,7 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
         // Detect faces using Google ML Vision
         print('Detecting faces...');
         final GoogleVisionImage visionImage =
-        GoogleVisionImage.fromFilePath(imageFile.path);
+            GoogleVisionImage.fromFilePath(imageFile.path);
         final FaceDetector faceDetector = GoogleVision.instance.faceDetector(
           const FaceDetectorOptions(enableLandmarks: true),
         );
@@ -206,12 +209,13 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
         final newEmbeddings = await _getEmbeddings(faceImage);
         newEmbeddingsList.add(newEmbeddings);
 
-        await Future.delayed(const Duration(seconds: 1)); // Delay between captures
+        await Future.delayed(
+            const Duration(seconds: 1)); // Delay between captures
       }
 
       // Calculate average embeddings for verification
       final averageNewEmbeddings =
-      _calculateAverageEmbeddings(newEmbeddingsList);
+          _calculateAverageEmbeddings(newEmbeddingsList);
 
       // Verify embeddings with stored embeddings
       final isVerified = await _verifyFace(averageNewEmbeddings);
@@ -224,7 +228,8 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Face not recognized. Please try again.')),
+          const SnackBar(
+              content: Text('Face not recognized. Please try again.')),
         );
       }
     } catch (e) {
@@ -377,9 +382,9 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
             const Center(child: CircularProgressIndicator())
           else
             Expanded(
-              child:Center(
-              child: CameraPreview(_controller),
-            ),
+              child: Center(
+                child: CameraPreview(_controller),
+              ),
             ),
           Padding(
             padding: const EdgeInsets.all(16.0),
