@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:helloapp/students/Student_Home_Page.dart'; // Ensure you have the correct import path
 
-
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
 
@@ -54,7 +53,8 @@ class _LoginPageState extends State<LoginPage> {
         if (e.code == 'user-not-found' || e.code == 'wrong-password') {
           message = 'Wrong username or password. Please try again.';
         } else {
-          message = 'An error occurred. Please check your Username or Password and try again.';
+          message =
+              'An error occurred. Please check your Username or Password and try again.';
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message)),
@@ -78,7 +78,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Welcome to Me App'),
+        title: const Text('Welcome to FaceTrack App'),
       ),
       body: SingleChildScrollView(
         child: Padding(

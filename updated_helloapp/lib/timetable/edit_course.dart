@@ -137,46 +137,51 @@ class _EditCourseTimetableState extends State<EditCourseTimetable> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextFormField(
-                initialValue: courseName,
-                decoration: const InputDecoration(labelText: 'Course Name'),
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Please enter course name';
-                  }
-                  return null;
-                },
-                onSaved: (value) {
-                  courseName = value!;
-                },
-              ),
-              TextFormField(
-                initialValue: lecturerEmail,
-                decoration: const InputDecoration(labelText: 'Lecturer Email'),
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Please enter lecturer email';
-                  }
-                  return null;
-                },
-                onSaved: (value) {
-                  lecturerEmail = value!;
-                },
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _addLesson,
-                child: const Text('Add Lesson'),
-              ),
-              Expanded(
-                child: ListView.builder(
+      body: SingleChildScrollView(
+        // Wrap content in SingleChildScrollView
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextFormField(
+                  initialValue: courseName,
+                  decoration: const InputDecoration(labelText: 'Course Name'),
+                  validator: (value) {
+                    if (value!.isEmpty) {
+                      return 'Please enter course name';
+                    }
+                    return null;
+                  },
+                  onSaved: (value) {
+                    courseName = value!;
+                  },
+                ),
+                TextFormField(
+                  initialValue: lecturerEmail,
+                  decoration:
+                      const InputDecoration(labelText: 'Lecturer Email'),
+                  validator: (value) {
+                    if (value!.isEmpty) {
+                      return 'Please enter lecturer email';
+                    }
+                    return null;
+                  },
+                  onSaved: (value) {
+                    lecturerEmail = value!;
+                  },
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _addLesson,
+                  child: const Text('Add Lesson'),
+                ),
+                ListView.builder(
+                  shrinkWrap: true, // Avoid infinite height issue
+                  physics:
+                      NeverScrollableScrollPhysics(), // Disable scrolling within ListView
                   itemCount: lessons.length,
                   itemBuilder: (context, index) {
                     return LessonWidget(
@@ -189,22 +194,23 @@ class _EditCourseTimetableState extends State<EditCourseTimetable> {
                     );
                   },
                 ),
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _emailController,
-                decoration: InputDecoration(
-                  labelText: 'Student Email',
-                  suffixIcon: IconButton(
-                    icon: Icon(Icons.add),
-                    onPressed: _addStudentEmail,
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _emailController,
+                  decoration: InputDecoration(
+                    labelText: 'Student Email',
+                    suffixIcon: IconButton(
+                      icon: Icon(Icons.add),
+                      onPressed: _addStudentEmail,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 10),
-              Text('Added Students:'),
-              Expanded(
-                child: ListView.builder(
+                const SizedBox(height: 10),
+                Text('Added Students:'),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics:
+                      NeverScrollableScrollPhysics(), // Disable internal scrolling
                   itemCount: studentEmails.length,
                   itemBuilder: (context, index) {
                     return ListTile(
@@ -218,12 +224,12 @@ class _EditCourseTimetableState extends State<EditCourseTimetable> {
                     );
                   },
                 ),
-              ),
-              ElevatedButton(
-                onPressed: _submitTimetable,
-                child: const Text('Update Course'),
-              ),
-            ],
+                ElevatedButton(
+                  onPressed: _submitTimetable,
+                  child: const Text('Update Course'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -423,10 +429,10 @@ class _LessonWidgetState extends State<LessonWidget> {
             const SizedBox(height: 2),
             ElevatedButton(
               onPressed: widget.onDelete,
-              child: const Text('Delete Lesson'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
               ),
+              child: const Text('Delete Lesson'),
             ),
           ],
         ),
