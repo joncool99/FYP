@@ -12,11 +12,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
 import 'package:geolocator/geolocator.dart';
 
-<<<<<<< HEAD
-=======
-//double allowedLatitude = 1.3760; // testing location
-//double allowedLongitude = 103.9588; // testing location
->>>>>>> eca44770ad7d300b98615fcf75f5dfa8c3591359
+
 
 
 const double allowedLatitude = 1.3294548283975756; // Replace with actual latitude
@@ -386,13 +382,12 @@ class _StudentTakeAttendancePageState extends State<StudentTakeAttendancePage> {
             const Center(child: CircularProgressIndicator())
           else
             Expanded(
-<<<<<<< HEAD
-              child: CameraPreview(_controller),
-=======
+
+
               child: Center(
                 child: CameraPreview(_controller),
               ),
->>>>>>> eca44770ad7d300b98615fcf75f5dfa8c3591359
+
             ),
           Padding(
             padding: const EdgeInsets.all(16.0),

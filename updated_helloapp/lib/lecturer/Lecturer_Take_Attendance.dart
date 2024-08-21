@@ -104,9 +104,13 @@ class _LecturerTakeAttendancePageState
     try {
       final Uint8List imageBytes = await _imageFile!.readAsBytes();
       final GoogleVisionImage visionImage =
-          GoogleVisionImage.fromFile(_imageFile!);
+      GoogleVisionImage.fromFile(_imageFile!);
       final FaceDetector faceDetector = GoogleVision.instance.faceDetector(
-        FaceDetectorOptions(enableLandmarks: true),
+        FaceDetectorOptions(
+          enableLandmarks: true,
+          mode: FaceDetectorMode.accurate,
+          minFaceSize: 0.1, // Adjust this value to detect smaller faces
+        ),
       );
       final List<Face> faces = await faceDetector.processImage(visionImage);
 
@@ -124,7 +128,7 @@ class _LecturerTakeAttendancePageState
       for (Face face in faces) {
         // Apply histogram equalization before alignment
         final img.Image equalizedImage =
-            _applyHistogramEqualization(originalImage);
+        _applyHistogramEqualization(originalImage);
 
         final img.Image alignedFaceImage = _alignFace(equalizedImage, face);
         final embeddings = await _getEmbeddings(alignedFaceImage);
@@ -224,7 +228,7 @@ class _LecturerTakeAttendancePageState
 
   Future<Map<String, dynamic>?> _findBestMatch(List<double> embeddings) async {
     final usersSnapshot =
-        await FirebaseFirestore.instance.collection('Users').get();
+    await FirebaseFirestore.instance.collection('Users').get();
     double maxSimilarity = -1.0;
     Map<String, dynamic>? bestMatch;
 
@@ -243,10 +247,10 @@ class _LecturerTakeAttendancePageState
           .toList();
 
       final normalizedStoredEmbeddings =
-          _normalizeEmbeddings(convertedEmbeddings);
+      _normalizeEmbeddings(convertedEmbeddings);
 
       final similarity =
-          _calculateCosineSimilarity(normalizedStoredEmbeddings, embeddings);
+      _calculateCosineSimilarity(normalizedStoredEmbeddings, embeddings);
 
       if (similarity.isNaN || similarity.isInfinite) {
         continue;
@@ -258,172 +262,135 @@ class _LecturerTakeAttendancePageState
       }
     }
 
-    if (maxSimilarity > 0.6) {
+    if (maxSimilarity > 0.65) {
       return bestMatch;
     }
 
     return null;
   }
 
-  List<double> _normalizeEmbeddings(List<double> embeddings) {
-    double norm = 0.0;
-    for (var value in embeddings) {
-      norm += value * value;
-    }
-    norm = sqrt(norm);
-
-    if (norm == 0.0) {
-      return embeddings;
-    }
-
-    return embeddings.map((e) => e / norm).toList();
-  }
-
-  double _calculateCosineSimilarity(
-      List<double> vectorA, List<double> vectorB) {
-    double dotProduct = 0.0;
-    double magnitudeA = 0.0;
-    double magnitudeB = 0.0;
-
-    for (int i = 0; i < vectorA.length; i++) {
-      dotProduct += vectorA[i] * vectorB[i];
-      magnitudeA += vectorA[i] * vectorA[i];
-      magnitudeB += vectorB[i] * vectorB[i];
-    }
-
-    magnitudeA = sqrt(magnitudeA);
-    magnitudeB = sqrt(magnitudeB);
-
-    if (magnitudeA != 0.0 && magnitudeB != 0.0) {
-      return dotProduct / (magnitudeA * magnitudeB);
-    } else {
-      return double.nan;
-    }
-  }
-
   Future<void> _markAttendance(String email) async {
     try {
       final attendanceRef = FirebaseFirestore.instance
-          .collection('Courses')
-          .doc(widget.courseId)
-          .collection('Lessons')
-          .doc(widget.lessonName)
           .collection('Attendance')
+          .doc(widget.courseId)
+          .collection(widget.lessonName)
           .doc(email);
 
-      await attendanceRef.set({
-        'email': email,
-        'status': 'present',
-        'courseName': widget.courseName,
+      final attendanceData = {
         'courseId': widget.courseId,
         'lessonName': widget.lessonName,
         'startTime': widget.startTime,
         'endTime': widget.endTime,
         'location': widget.location,
+        'status': 'present',
         'timestamp': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      };
 
-      print('Attendance marked in Firestore for $email!');
+      await attendanceRef.set(attendanceData);
     } catch (e) {
-      print('Failed to mark attendance for $email: $e');
+      print('Error marking attendance: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error marking attendance: $e')),
+      );
     }
   }
 
+  List<double> _normalizeEmbeddings(List<double> embeddings) {
+    double norm = sqrt(embeddings.map((e) => e * e).reduce((a, b) => a + b));
+    return embeddings.map((e) => e / norm).toList();
+  }
+
   Future<List<double>> _getEmbeddings(img.Image faceImage) async {
-    print('Getting embeddings...');
-    final img.Image resizedImage =
-        img.copyResize(faceImage, width: 112, height: 112);
-    final List input = _imageToByteListFloat32(resizedImage, 112, 128, 128);
+    final resizedImage = img.copyResize(faceImage, width: 112, height: 112);
+    final imageMatrix = _imageToByteListFloat32(resizedImage, 112, 127.5, 128);
 
-    final output = List.filled(1 * 192, 0).reshape([1, 192]);
+    final output = List.filled(192, 0.0).reshape([1, 192]);
 
-    _interpreter.run(input, output);
+    _interpreter.run(imageMatrix, output);
 
     return List<double>.from(output[0]);
   }
 
-  List _imageToByteListFloat32(
+  Float32List _imageToByteListFloat32(
       img.Image image, int inputSize, double mean, double std) {
-    final Float32List convertedBytes =
-        Float32List(1 * inputSize * inputSize * 3);
+    final convertedBytes = Float32List(inputSize * inputSize * 3);
     final buffer = Float32List.view(convertedBytes.buffer);
     int pixelIndex = 0;
-
     for (int i = 0; i < inputSize; i++) {
       for (int j = 0; j < inputSize; j++) {
-        final int pixel = image.getPixelSafe(j, i);
+        final pixel = image.getPixel(j, i);
         buffer[pixelIndex++] = (img.getRed(pixel) - mean) / std;
         buffer[pixelIndex++] = (img.getGreen(pixel) - mean) / std;
         buffer[pixelIndex++] = (img.getBlue(pixel) - mean) / std;
       }
     }
-    return convertedBytes.buffer.asUint8List();
+    return convertedBytes;
   }
 
-  @override
-  void dispose() {
-    _interpreter.close();
-    super.dispose();
+  double _calculateCosineSimilarity(
+      List<double> vectorA, List<double> vectorB) {
+    double dotProduct = 0.0;
+    double normA = 0.0;
+    double normB = 0.0;
+    for (int i = 0; i < vectorA.length; i++) {
+      dotProduct += vectorA[i] * vectorB[i];
+      normA += vectorA[i] * vectorA[i];
+      normB += vectorB[i] * vectorB[i];
+    }
+    return dotProduct / (sqrt(normA) * sqrt(normB));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Lecturer Take Attendance'),
+        title: Text('Take Attendance - ${widget.courseName}'),
       ),
-      body: Center(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: 300,
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_imageFile != null)
+              Image.file(
+                _imageFile!,
                 height: 300,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: _imageFile != null
-                    ? Image.file(_imageFile!)
-                    : const Center(child: Text('Upload Class photo')),
+                fit: BoxFit.cover,
               ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: ElevatedButton(
-                      onPressed:
-                          _isProcessing || !_isModelLoaded ? null : _pickImage,
-                      child: const Text('Pick Image'),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: ElevatedButton(
-                      onPressed: _isProcessing || !_isModelLoaded
-                          ? null
-                          : _processImage,
-                      child: Text('Process and Mark Attendance'),
-                    ),
-                  ),
-                ],
-              ),
-              if (_identifiedStudents.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      Text('Identified Students:'),
-                      ..._identifiedStudents.map((name) => Text(name)).toList(),
-                    ],
-                  ),
+            if (_identifiedStudents.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: _identifiedStudents
+                      .map((student) => Text(
+                    student,
+                    style: TextStyle(fontSize: 16),
+                  ))
+                      .toList(),
                 ),
-            ],
-          ),
+              ),
+            const SizedBox(height: 16),
+            Center(
+              child: ElevatedButton(
+                onPressed: _isProcessing ? null : _pickImage,
+                child: Text('Pick Image'),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Center(
+              child: ElevatedButton(
+                onPressed: _isProcessing || _imageFile == null
+                    ? null
+                    : _processImage,
+                child: Text('Process Image'),
+              ),
+            ),
+            if (_isProcessing)
+              Center(
+                child: CircularProgressIndicator(),
+              ),
+          ],
         ),
       ),
     );
