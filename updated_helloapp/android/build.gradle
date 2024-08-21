@@ -17,10 +17,3 @@ tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
 
-dependencies {
-    implementation 'org.tensorflow:tensorflow-lite:+'
-    implementation 'org.tensorflow:tensorflow-lite-gpu:+'
-    implementation 'org.tensorflow:tensorflow-lite-support:+'
-
-    implementation 'org.tensorflow:tensorflow-lite-support:0.1.0-rc1'
-}

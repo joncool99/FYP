@@ -14,8 +14,6 @@ dependencies:
   geolocator: ^10.0.1
   geocoding: ^2.0.4
 
-
-
   flutter:
     sdk: flutter
   image_picker: ^1.1.2
@@ -28,9 +26,7 @@ dependencies:
   syncfusion_flutter_calendar: ^25.2.7
   
   
-  tflite_flutter: ^0.9.5
-  tflite_flutter_helper: ^0.2.0
-
+  tflite_flutter: ^0.10.4
   permission_handler: ^11.3.1
   google_ml_vision: ^0.0.8
   
