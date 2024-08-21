@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:tflite_flutter_helper/tflite_flutter_helper.dart';
 
 class StudentRegisterFacePage extends StatefulWidget {
   final CameraDescription camera;
@@ -166,7 +167,7 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
 
         print('Detecting faces...');
         final GoogleVisionImage visionImage =
-            GoogleVisionImage.fromFilePath(imageFile.path);
+        GoogleVisionImage.fromFilePath(imageFile.path);
         final FaceDetector faceDetector = GoogleVision.instance.faceDetector(
           const FaceDetectorOptions(enableLandmarks: true),
         );
@@ -186,7 +187,7 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
 
         // Apply histogram equalization to improve image quality
         final img.Image equalizedImage =
-            _applyHistogramEqualization(originalImage);
+        _applyHistogramEqualization(originalImage);
 
         final img.Image alignedFaceImage = _alignFace(equalizedImage, face);
 
@@ -214,7 +215,7 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
       }
 
       final averageEmbeddings =
-          _normalizeEmbeddings(_calculateAverageEmbeddings(embeddingsList));
+      _normalizeEmbeddings(_calculateAverageEmbeddings(embeddingsList));
 
       await _saveEmbeddingsAndLandmarksToFirestore(
           averageEmbeddings, landmarksList);
@@ -276,61 +277,69 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
   }
 
   img.Image _alignFace(img.Image image, Face face) {
-    final leftEye = face.getLandmark(FaceLandmarkType.leftEye)!.position;
-    final rightEye = face.getLandmark(FaceLandmarkType.rightEye)!.position;
-    final dx = rightEye.dx - leftEye.dx;
-    final dy = rightEye.dy - leftEye.dy;
-    final angle = atan2(dy, dx);
+    final leftEye = face.getLandmark(FaceLandmarkType.leftEye)?.position;
+    final rightEye = face.getLandmark(FaceLandmarkType.rightEye)?.position;
+    final noseBase = face.getLandmark(FaceLandmarkType.noseBase)?.position;
 
-    if (angle.isNaN || angle.isInfinite) {
-      print('Invalid angle: $angle');
+    if (leftEye == null || rightEye == null || noseBase == null) {
       return image;
     }
 
-    img.Image alignedImage = img.copyRotate(image, -angle * 180 / pi);
+    // Calculate the angle for rotation
+    final dx = rightEye.dx - leftEye.dx;
+    final dy = rightEye.dy - leftEye.dy;
+    final angle = atan2(dy, dx) * 180 / pi;
 
-    final alignedFace = img.copyCrop(
-      alignedImage,
-      face.boundingBox.left.toInt(),
-      face.boundingBox.top.toInt(),
-      face.boundingBox.width.toInt(),
-      face.boundingBox.height.toInt(),
-    );
+    // Get the center of the image
+    final centerX = image.width / 2;
+    final centerY = image.height / 2;
 
-    return alignedFace;
+    // Create a new image with the same size as the original
+    final rotatedImage = img.Image(image.width, image.height);
+
+    // Rotate the image manually
+    for (int y = 0; y < image.height; y++) {
+      for (int x = 0; x < image.width; x++) {
+        // Calculate the original coordinates before rotation
+        final xOffset = x - centerX;
+        final yOffset = y - centerY;
+
+        final rotatedX = (xOffset * cos(angle * pi / 180) - yOffset * sin(angle * pi / 180) + centerX).round();
+        final rotatedY = (xOffset * sin(angle * pi / 180) + yOffset * cos(angle * pi / 180) + centerY).round();
+
+        if (rotatedX >= 0 && rotatedX < image.width && rotatedY >= 0 && rotatedY < image.height) {
+          rotatedImage.setPixel(x, y, image.getPixel(rotatedX, rotatedY));
+        }
+      }
+    }
+
+    return rotatedImage;
   }
 
-  Future<void> _saveEmbeddingsAndLandmarksToFirestore(
-      List<double> embeddings, List<Map<String, dynamic>> landmarksList) async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        await FirebaseFirestore.instance
-            .collection('Users')
-            .doc(user.email)
-            .set({
-          'embeddings': embeddings,
-          'landmarks':
-              landmarksList.last, // Store only the last set of landmarks
-        }, SetOptions(merge: true));
-        print('Face embeddings and landmarks saved to Firestore!');
-      }
-    } catch (e) {
-      print('Failed to save face embeddings and landmarks: $e');
-    }
+  Future<List<double>> _getEmbeddings(img.Image image) async {
+    final imageBytes = Uint8List.fromList(img.encodeJpg(image));
+    final inputImage = img.Image.fromBytes(image.width, image.height, imageBytes);
+
+    final input = TensorImage.fromImage(inputImage);
+    final output = TensorBuffer.createFixedSize(<int>[1, 128], TfLiteType.float32);
+
+    _interpreter.run(input.buffer, output.buffer);
+
+    final embeddings = output.getDoubleList();
+    return embeddings;
   }
 
   List<double> _calculateAverageEmbeddings(List<List<double>> embeddingsList) {
-    final int length = embeddingsList.first.length;
-    final List<double> averageEmbeddings = List.filled(length, 0.0);
+    final numEmbeddings = embeddingsList[0].length;
+    final averageEmbeddings = List.filled(numEmbeddings, 0.0);
 
-    for (List<double> embeddings in embeddingsList) {
-      for (int i = 0; i < length; i++) {
+    for (var embeddings in embeddingsList) {
+      for (int i = 0; i < numEmbeddings; i++) {
         averageEmbeddings[i] += embeddings[i];
       }
     }
 
-    for (int i = 0; i < length; i++) {
+    for (int i = 0; i < numEmbeddings; i++) {
       averageEmbeddings[i] /= embeddingsList.length;
     }
 
@@ -338,48 +347,29 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
   }
 
   List<double> _normalizeEmbeddings(List<double> embeddings) {
-    double magnitude = sqrt(embeddings.fold(0.0, (sum, e) => sum + e * e));
-    return embeddings.map((e) => e / magnitude).toList();
+    final norm = sqrt(embeddings.fold(0.0, (sum, e) => sum + e * e));
+    if (norm == 0.0) return embeddings;
+
+    return embeddings.map((e) => e / norm).toList();
   }
 
-  Future<List<double>> _getEmbeddings(img.Image faceImage) async {
-    print('Getting embeddings...');
-    final img.Image resizedImage =
-        img.copyResize(faceImage, width: 112, height: 112);
-    final List input = _imageToByteListFloat32(resizedImage, 112, 128, 128);
-
-    final output = List.filled(1 * 192, 0).reshape([1, 192]);
-
-    _interpreter.run(input, output);
-
-    return List<double>.from(output[0]);
-  }
-
-  List _imageToByteListFloat32(
-      img.Image image, int inputSize, double mean, double std) {
-    final Float32List convertedBytes =
-        Float32List(1 * inputSize * inputSize * 3);
-    final buffer = Float32List.view(convertedBytes.buffer);
-    int pixelIndex = 0;
-
-    for (int i = 0; i < inputSize; i++) {
-      for (int j = 0; j < inputSize; j++) {
-        if (pixelIndex < buffer.length) {
-          final int pixel = image.getPixelSafe(j, i);
-          buffer[pixelIndex++] = (img.getRed(pixel) - mean) / std;
-          buffer[pixelIndex++] = (img.getGreen(pixel) - mean) / std;
-          buffer[pixelIndex++] = (img.getBlue(pixel) - mean) / std;
-        }
+  Future<void> _saveEmbeddingsAndLandmarksToFirestore(
+      List<double> embeddings, List<Map<String, dynamic>> landmarksList) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final docRef = FirebaseFirestore.instance.collection('Users').doc(user.email);
+        await docRef.set({
+          'embeddings': embeddings,
+          'landmarks': landmarksList,
+        });
       }
+    } catch (e) {
+      print('Error saving data to Firestore: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error saving data to Firestore: $e')),
+      );
     }
-    return convertedBytes.buffer.asUint8List();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _interpreter.close();
-    super.dispose();
   }
 
   @override
@@ -391,30 +381,31 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          if (!_isCameraInitialized || !_isModelLoaded)
-            const Center(child: CircularProgressIndicator())
-          else if (_isFaceRegistered)
-            const Center(
-              child: Text('Face already registered.',
-                  style: TextStyle(fontSize: 18, color: Colors.green)),
-            )
-          else
-            Expanded(
-              child:Center(
+          if (_isCameraInitialized)
+            SizedBox(
+              width: double.infinity,
+              height: MediaQuery.of(context).size.height * 0.5,
               child: CameraPreview(_controller),
             ),
-            ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton(
-              onPressed: _isProcessing || !_isModelLoaded || _isFaceRegistered
-                  ? null
-                  : _captureAndRegisterFace,
-              child: const Text('Capture and Register Face'),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: _captureAndRegisterFace,
+            child: Text(
+              _isProcessing
+                  ? 'Processing...'
+                  : _isFaceRegistered
+                  ? 'Face Registered'
+                  : 'Register Face',
             ),
           ),
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 }

@@ -26,7 +26,10 @@ dependencies:
   syncfusion_flutter_calendar: ^25.2.7
   
   
-  tflite_flutter: ^0.10.4
+  tflite_flutter: ^0.9.5
+
+  tflite_flutter_helper: ^0.2.1  # Check for the latest version on pub.dev
+
   permission_handler: ^11.3.1
   google_ml_vision: ^0.0.8
   
