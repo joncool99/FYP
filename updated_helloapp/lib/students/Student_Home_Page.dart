@@ -369,6 +369,16 @@ class HomeWidget extends StatelessWidget {
                             ),
                           ),
                         ),
+                        if (status == 'absent')
+                        const Padding(
+                          padding: EdgeInsets.only(top: 4.0),
+                          child: Text(
+                            'Absent',
+                            style: TextStyle(
+                              color: Color.fromARGB(255, 200, 46, 46),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                   onTap: () {
