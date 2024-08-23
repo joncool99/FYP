@@ -118,6 +118,98 @@ class _StudentHomepageState extends State<StudentHomePage> {
     }
   }
 
+<<<<<<< Updated upstream
+=======
+  Future<void> _fetchTodayLessons() async {
+    DateTime now = DateTime.now();
+    DateTime startOfDay = DateTime(now.year, now.month, now.day);
+    DateTime endOfDay = DateTime(now.year, now.month, now.day, 23, 59, 59);
+
+    QuerySnapshot coursesSnapshot = await FirebaseFirestore.instance
+        .collection('Courses')
+        .where('students', arrayContains: widget.email)
+        .get();
+
+    List<Future<Map<String, dynamic>>> lessonsFutures = [];
+
+    for (var courseDoc in coursesSnapshot.docs) {
+      QuerySnapshot lessonsSnapshot = await courseDoc.reference
+          .collection('Lessons')
+          .where('date', isGreaterThanOrEqualTo: startOfDay)
+          .where('date', isLessThanOrEqualTo: endOfDay)
+          .get();
+
+      for (var lessonDoc in lessonsSnapshot.docs) {
+        lessonsFutures.add(_buildLessonMap(courseDoc, lessonDoc));
+      }
+    }
+
+    todayLessons = await Future.wait(lessonsFutures);
+
+    // Check and mark absent if necessary
+    _checkAndMarkAbsent();
+    setState(() {});
+  }
+
+  Future<void> _checkAndMarkAbsent() async {
+    DateTime now = DateTime.now();
+
+    for (var lesson in todayLessons) {
+      DateTime endTime = _parseTime(now, lesson['endTime']);
+
+      // If the current time is after the lesson's end time and the student hasn't been marked present
+      if (now.isAfter(endTime) && lesson['status'] != 'present') {
+        // Mark the student as absent if they haven't taken attendance
+        await _markAbsent(lesson['courseId'], lesson['lessonName']);
+      }
+    }
+  }
+
+  Future<void> _markAbsent(String courseId, String lessonName) async {
+    try {
+      DocumentReference attendanceRef = FirebaseFirestore.instance
+          .collection('Courses')
+          .doc(courseId)
+          .collection('Lessons')
+          .doc(lessonName)
+          .collection('Attendance')
+          .doc(widget.email);
+
+      await attendanceRef.set({
+        'email': widget.email,
+        'status': 'absent',
+        'timestamp': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      print(
+          'Attendance marked as absent for lesson $lessonName in course $courseId');
+    } catch (e) {
+      print('Error marking attendance as absent: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> _buildLessonMap(
+      DocumentSnapshot courseDoc, DocumentSnapshot lessonDoc) async {
+    DocumentSnapshot attendanceDoc = await lessonDoc.reference
+        .collection('Attendance')
+        .doc(widget.email)
+        .get();
+
+    String status =
+        attendanceDoc.exists ? attendanceDoc.get('status') : 'absent';
+
+    return {
+      'courseName': courseDoc.get('courseName') ?? 'No Course Name',
+      'courseId': courseDoc.get('courseId'),
+      'lessonName': lessonDoc.get('lessonName') ?? 'No Lesson Name',
+      'startTime': lessonDoc.get('startTime') ?? '00:00',
+      'endTime': lessonDoc.get('endTime') ?? '00:00',
+      'location': lessonDoc.get('location') ?? 'No Location',
+      'status': status,
+    };
+  }
+
+>>>>>>> Stashed changes
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -168,6 +260,13 @@ class _StudentHomepageState extends State<StudentHomePage> {
   }
 }
 
+DateTime _parseTime(DateTime now, String timeString) {
+  List<String> timeParts = timeString.split(':');
+  int hour = int.parse(timeParts[0]);
+  int minute = int.parse(timeParts[1]);
+  return DateTime(now.year, now.month, now.day, hour, minute);
+}
+
 class HomeWidget extends StatelessWidget {
   final String studentName;
   final String? profilePhotoUrl;
@@ -209,10 +308,62 @@ class HomeWidget extends StatelessWidget {
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
+<<<<<<< Updated upstream
                     ),
                     const Text(
                       'Welcome!',
                       style: TextStyle(fontSize: 16),
+=======
+                      const Text(
+                        'Welcome!',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              height: 2,
+              color: Colors.blue[900],
+            ),
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text(
+                'Today\'s Agenda',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ),
+            ...lessons.map((lesson) {
+              DateTime now = DateTime.now();
+              DateTime startTime = _parseTime(now, lesson['startTime']);
+              DateTime endTime = _parseTime(now, lesson['endTime']);
+              String status = lesson['status'] ?? 'absent';
+
+              return Container(
+                margin:
+                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: status == 'present'
+                      ? const Color.fromARGB(255, 132, 240, 199)
+                      : null, // Change to green if present,
+                  gradient: status == 'present'
+                      ? null
+                      : const LinearGradient(
+                          colors: [Colors.white, Color(0xFFAAACF8)],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ),
+
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.5),
+                      spreadRadius: 1,
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+>>>>>>> Stashed changes
                     ),
                   ],
                 ),
@@ -252,12 +403,43 @@ class HomeWidget extends StatelessWidget {
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                       ),
+<<<<<<< Updated upstream
                 boxShadow: [
                   BoxShadow(
                     color: Colors.grey.withOpacity(0.5),
                     spreadRadius: 1,
                     blurRadius: 6,
                     offset: const Offset(0, 3),
+=======
+                      Row(
+                        children: [
+                          const Icon(Icons.place, size: 20, color: Colors.grey),
+                          const SizedBox(width: 5),
+                          Text(lesson['location']),
+                        ],
+                      ),
+                      if (status == 'present')
+                        const Padding(
+                          padding: EdgeInsets.only(top: 4.0),
+                          child: Text(
+                            'Present',
+                            style: TextStyle(
+                              color: Color.fromARGB(255, 0, 0, 0),
+                            ),
+                          ),
+                        ),
+                      if (status == 'absent')
+                        const Padding(
+                          padding: EdgeInsets.only(top: 4.0),
+                          child: Text(
+                            'Absent',
+                            style: TextStyle(
+                              color: Color.fromARGB(255, 255, 0, 0),
+                            ),
+                          ),
+                        ),
+                    ],
+>>>>>>> Stashed changes
                   ),
                 ],
               ),

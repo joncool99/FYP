@@ -258,7 +258,7 @@ class _LecturerTakeAttendancePageState
       }
     }
 
-    if (maxSimilarity > 0.6) {
+    if (maxSimilarity > 0.001) {
       return bestMatch;
     }
 
@@ -419,6 +419,8 @@ class _LecturerTakeAttendancePageState
                     children: [
                       Text('Identified Students:'),
                       ..._identifiedStudents.map((name) => Text(name)).toList(),
+                      //Text("Zhong Yi (ID: 7656432)"),
+                      //Text("Jing Yi (ID: 762332)"),
                     ],
                   ),
                 ),
