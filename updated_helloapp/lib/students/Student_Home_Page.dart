@@ -99,7 +99,47 @@ class _StudentHomepageState extends State<StudentHomePage> {
     }
 
     todayLessons = await Future.wait(lessonsFutures);
+
+    // Check and mark absent if necessary
+    _checkAndMarkAbsent();
     setState(() {});
+  }
+
+  Future<void> _checkAndMarkAbsent() async {
+    DateTime now = DateTime.now();
+
+    for (var lesson in todayLessons) {
+      DateTime endTime = _parseTime(now, lesson['endTime']);
+
+      // If the current time is after the lesson's end time and the student hasn't been marked present
+      if (now.isAfter(endTime) && lesson['status'] != 'present') {
+        // Mark the student as absent if they haven't taken attendance
+        await _markAbsent(lesson['courseId'], lesson['lessonName']);
+      }
+    }
+  }
+
+  Future<void> _markAbsent(String courseId, String lessonName) async {
+    try {
+      DocumentReference attendanceRef = FirebaseFirestore.instance
+          .collection('Courses')
+          .doc(courseId)
+          .collection('Lessons')
+          .doc(lessonName)
+          .collection('Attendance')
+          .doc(widget.email);
+
+      await attendanceRef.set({
+        'email': widget.email,
+        'status': 'absent',
+        'timestamp': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      print(
+          'Attendance marked as absent for lesson $lessonName in course $courseId');
+    } catch (e) {
+      print('Error marking attendance as absent: $e');
+    }
   }
 
   Future<Map<String, dynamic>> _buildLessonMap(
@@ -188,6 +228,13 @@ class _StudentHomepageState extends State<StudentHomePage> {
       ),
     );
   }
+}
+
+DateTime _parseTime(DateTime now, String timeString) {
+  List<String> timeParts = timeString.split(':');
+  int hour = int.parse(timeParts[0]);
+  int minute = int.parse(timeParts[1]);
+  return DateTime(now.year, now.month, now.day, hour, minute);
 }
 
 class HomeWidget extends StatelessWidget {
