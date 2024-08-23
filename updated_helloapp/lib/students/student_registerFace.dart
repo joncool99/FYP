@@ -400,7 +400,9 @@ class _StudentRegisterFacePageState extends State<StudentRegisterFacePage> {
             )
           else
             Expanded(
+              child:Center(
               child: CameraPreview(_controller),
+            ),
             ),
           Padding(
             padding: const EdgeInsets.all(16.0),

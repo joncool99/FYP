@@ -68,13 +68,12 @@ class _LecturerRecordsPageState extends State<LecturerRecordsPage> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: const Text('Attendance Data',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 23)),
+        title: const Text('Attendance Data'),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(9.0),
+          preferredSize: const Size.fromHeight(4.0),
           child: Container(
-            color: const Color.fromRGBO(22, 22, 151, 100),
-            height: 5.0,
+            color: Colors.blue[800],
+            height: 3.0,
           ),
         ),
         automaticallyImplyLeading: false,

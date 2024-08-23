@@ -74,13 +74,14 @@ class _AdminRecordPageState extends State<AdminRecordPage> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: const Text('Admin Attendance Data',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 23)),
+        title: const Text('Admin Attendance Data'),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(9.0),
+          preferredSize: const Size.fromHeight(8.0),
           child: Container(
-            color: const Color.fromRGBO(22, 22, 151, 100),
+            color: const Color.fromRGBO(33, 150, 243, 1),
             height: 5.0,
+
+            
           ),
         ),
         

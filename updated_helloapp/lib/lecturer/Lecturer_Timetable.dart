@@ -107,6 +107,7 @@ class _LecturerTimetableState extends State<LecturerTimetable> {
             height: 3.0,
           ),
         ),
+        automaticallyImplyLeading: false,
       ),
       body: Column(
         children: [
